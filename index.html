@@ -2,1579 +2,349 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Name That Photo">
-<meta name="theme-color" content="#111111">
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="manifest" href="manifest.json">
-<title>Name That Photo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Name That Photo — Voice-Powered Photo Labeling for Inspectors</title>
+<link rel="icon" href="icon.png">
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin:0; padding:0; height:100%; background:#000; color:#fff;
-    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
-  #app { position:fixed; inset:0; display:flex; flex-direction:column; min-height:0; }
-  #app.hidden { display:none; }
-
-  /* ---------- Auth (sign in / sign up) ---------- */
-  #auth-view { position:fixed; inset:0; z-index:500; background:#000; display:flex;
-    align-items:center; justify-content:center; padding:24px; }
-  #auth-view.hidden { display:none; }
-  #auth-card { width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px; }
-  #auth-title { margin:0; font-size:26px; font-weight:800; text-align:center; }
-  #auth-subtitle { margin:0 0 8px; font-size:14px; color:#999; text-align:center; }
-  #auth-card input { background:#1c1c1e; border:1px solid #333; border-radius:10px; color:#fff;
-    padding:12px 14px; font-size:16px; }
-  #auth-card input::placeholder { color:#777; }
-  #auth-submit { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:12px 0;
-    font-size:16px; font-weight:700; margin-top:4px; }
-  #auth-submit:disabled { background:#333; color:#777; }
-  #auth-toggle-mode, #auth-forgot { background:none; border:none; color:#0a84ff; font-size:13px;
-    padding:6px 0; }
-  #auth-error { background:#3a1414; color:#ff6b6b; border:1px solid #5a1f1f; border-radius:8px;
-    padding:8px 10px; font-size:13px; }
-  #auth-error.hidden { display:none; }
-
-  /* ---------- Paywall (subscribe / start trial) ---------- */
-  #paywall-view { position:fixed; inset:0; z-index:500; background:#000; display:flex;
-    align-items:center; justify-content:center; padding:24px; }
-  #paywall-view.hidden { display:none; }
-  #paywall-card { width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
-  #paywall-title { margin:0; font-size:24px; font-weight:800; text-align:center; }
-  #paywall-subtitle { margin:0 0 8px; font-size:14px; color:#999; text-align:center; line-height:1.4; }
-  #paywall-start { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:14px 0;
-    font-size:16px; font-weight:700; }
-  #paywall-start:disabled { background:#333; color:#777; }
-  #paywall-refresh, #paywall-signout { background:none; border:none; color:#0a84ff; font-size:13px;
-    padding:6px 0; }
-  #paywall-signout { color:#888; }
-  #paywall-error { background:#3a1414; color:#ff6b6b; border:1px solid #5a1f1f; border-radius:8px;
-    padding:8px 10px; font-size:13px; }
-  #paywall-error.hidden { display:none; }
-
-  /* ---------- Account (subscription status + Billing Portal, task #66) ---------- */
-  #account-view { position:fixed; inset:0; z-index:550; background:#000; display:flex;
-    align-items:center; justify-content:center; padding:24px; }
-  #account-view.hidden { display:none; }
-  #account-card { width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
-  #account-title { margin:0; font-size:22px; font-weight:800; text-align:center; }
-  #account-status-text { margin:0 0 8px; font-size:14px; color:#999; text-align:center; line-height:1.4; }
-  #account-manage { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:14px 0;
-    font-size:16px; font-weight:700; }
-  #account-manage:disabled { background:#333; color:#777; }
-  #account-signout-btn { background:none; border:none; color:#888; font-size:13px; padding:6px 0; }
-  #account-close { background:#1c1c1e; border:1px solid #333; color:#fff; border-radius:10px;
-    padding:12px 0; font-size:15px; font-weight:600; }
-  #account-error { background:#3a1414; color:#ff6b6b; border:1px solid #5a1f1f; border-radius:8px;
-    padding:8px 10px; font-size:13px; }
-  #account-error.hidden { display:none; }
-  /* ---------- Drive connect row (tasks #29-32) ---------- */
-  #drive-status-row { display:flex; align-items:center; justify-content:space-between;
-    gap:8px; background:#1c1c1e; border:1px solid #333; border-radius:10px; padding:10px 14px; }
-  #drive-status-text { font-size:13px; color:#ccc; }
-  #drive-connect-btn, #drive-disconnect-btn { background:#0a84ff; color:#fff; border:none;
-    border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:600; flex:0 0 auto; }
-  #drive-disconnect-btn { background:#333; }
-  #drive-disconnect-btn.hidden, #drive-connect-btn.hidden { display:none; }
-
-  /* ---------- Admin (hidden beta-access toggle, task #65) ---------- */
-  /* Not in the normal app flow — reached only via ?admin=1 in the URL, and even then only
-     rendered if the signed-in email matches CLIENT_ADMIN_EMAILS in app.js. That client-side
-     check is just to keep it out of the way for everyone else; the actual security boundary
-     is server-side in admin-set-beta.js, which re-checks the caller's ID token against
-     ADMIN_EMAILS on Netlify regardless of what this page shows. */
-  #admin-view { position:fixed; inset:0; z-index:600; background:#000; display:flex;
-    align-items:center; justify-content:center; padding:24px; }
-  #admin-view.hidden { display:none; }
-  #admin-card { width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
-  #admin-title { margin:0; font-size:22px; font-weight:800; text-align:center; }
-  #admin-subtitle { margin:0 0 8px; font-size:13px; color:#999; text-align:center; line-height:1.4; }
-  #admin-card input { background:#1c1c1e; border:1px solid #333; border-radius:10px; color:#fff;
-    padding:12px 14px; font-size:16px; }
-  #admin-card input::placeholder { color:#777; }
-  #admin-toggle-row { display:flex; align-items:center; justify-content:space-between;
-    background:#1c1c1e; border:1px solid #333; border-radius:10px; padding:12px 14px; }
-  #admin-toggle-row span { font-size:15px; }
-  #admin-beta-toggle { width:24px; height:24px; }
-  #admin-save { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:14px 0;
-    font-size:16px; font-weight:700; }
-  #admin-save:disabled { background:#333; color:#777; }
-  #admin-close { background:none; border:none; color:#888; font-size:13px; padding:6px 0; }
-  #admin-status { font-size:13px; text-align:center; padding:8px 10px; border-radius:8px; }
-  #admin-status.hidden { display:none; }
-  #admin-status.error { background:#3a1414; color:#ff6b6b; border:1px solid #5a1f1f; }
-  #admin-status.success { background:#142a1c; color:#5fd97a; border:1px solid #1f5a2f; }
-
-  /* ---------- Tabs ---------- */
-  #tabbar { display:flex; gap:8px; background:#111; border-top:1px solid #2a2a2a;
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom)); flex:0 0 auto; }
-  #tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
-    background:#1c1c1e; border:1px solid #333; border-radius:12px; color:#aaa; padding:10px 0;
-    font-size:13px; font-weight:700; }
-  #tabbar button .tab-icon { font-size:20px; line-height:1; }
-  #tabbar button.active { color:#fff; background:#0a84ff; border-color:#0a84ff; }
-
-  /* ---------- Camera view ---------- */
-  #camera-view { position:relative; flex:1; min-height:0; overflow:hidden; display:flex; }
-  #camera-view.hidden { display:none; }
-  /* iOS renders a brief native play/pause icon on any visible autoplaying <video> —
-     that overlay lives in a system compositing layer that no CSS (pseudo-elements,
-     opacity, a sibling cover div — all tried, all failed) can suppress, because it
-     isn't really part of the page's own paint tree. The only reliable fix is to never
-     let the <video> itself be visible: it's parked off-screen as a raw frame source,
-     and what the user actually sees is a <canvas> we paint by hand every frame from
-     that hidden video. Canvas pixels have no native player chrome to flash. */
-  video#preview { position:fixed; top:-9999px; left:-9999px; width:2px; height:2px; opacity:0; pointer-events:none; }
-  #preview-canvas { position:absolute; inset:0; width:100%; height:100%; background:#000; display:block; }
-  #shutter-wrap { position:absolute; bottom:24px; left:0; right:0; display:flex;
-    justify-content:center; align-items:center; pointer-events:none; }
-  #shutter { width:72px; height:72px; border-radius:50%; background:#fff; border:5px solid #444; pointer-events:auto; }
-  #shutter:active { background:#ccc; }
-  #shutter:disabled { background:#999; border-color:#666; opacity:.6; }
-  /* Phone camera screen was getting crowded — shrink the shutter, the current-project
-     pill, and the tab bar on narrow (phone-width) viewports only. Desktop sizing
-     (tuned separately to match Create New Project / Exit App) is untouched. */
-  @media (max-width: 600px) {
-    #shutter { width:60px; height:60px; border-width:4px; }
-    #tabbar button { padding:7px 0; font-size:12px; }
-    #tabbar button .tab-icon { font-size:17px; }
-    /* Current Project tab does the same job as this pill on phones — no need for both.
-       !important because the base #select-project-pill rule (which removes the .hidden
-       display:none once a project exists) sits later in the stylesheet and would
-       otherwise win this tie on specificity, making the pill reappear after project
-       creation. */
-    #select-project-pill { display:none !important; }
+  :root{
+    --navy:#0f172a; --navy2:#1e293b; --teal:#0d9488; --teal-light:#14b8a6;
+    --bg:#f8fafc; --text:#1e293b; --muted:#64748b; --line:#e2e8f0;
   }
-  #cam-status { position:absolute; top:env(safe-area-inset-top, 12px); left:0; right:0;
-    text-align:center; padding-top:12px; font-size:13px; color:#ccc; text-shadow:0 1px 2px #000; }
-  #flip-cam { position:absolute; bottom:36px; right:24px; width:44px; height:44px;
-    border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:18px; }
-  #pick-photo { position:absolute; bottom:36px; left:24px; width:44px; height:44px;
-    border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:18px; }
-  #compass-toggle { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 44px); right:16px;
-    width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555;
-    color:#fff; font-size:18px; }
-  #compass-toggle.active { background:#0a84ff; border-color:#0a84ff; }
-  #compass-readout { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 92px); right:16px;
-    background:rgba(0,0,0,.55); color:#fff; font-size:13px; font-weight:600; padding:5px 9px;
-    border-radius:8px; text-align:center; min-width:54px; text-shadow:0 1px 2px #000; }
-  #compass-readout.hidden { display:none; }
-  /* Right-anchored (not left:54px) so this row never collides with the wider
-     "Exit App" text pill on the opposite side of the same top row. */
-  #live-controls { position:fixed; top:env(safe-area-inset-top, 10px);
-    right:calc(env(safe-area-inset-right, 0px) + 10px); z-index:90; display:flex; gap:8px; }
-  #live-toggle { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px; font-weight:600;
-    padding:8px 12px; border-radius:18px; }
-  #live-toggle.active { background:#cc2b2b; border-color:#cc2b2b; }
-  #live-record-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px;
-    font-weight:600; padding:8px 12px; border-radius:18px; }
-  #live-record-btn.hidden { display:none; }
-  #live-record-btn.recording { background:#cc2b2b; border-color:#cc2b2b; }
-  #live-setup-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:14px;
-    width:34px; height:34px; border-radius:50%; }
-  #live-badge { position:fixed; top:calc(env(safe-area-inset-top, 10px) + 44px);
-    right:calc(env(safe-area-inset-right, 0px) + 10px);
-    background:#cc2b2b; color:#fff; font-size:12px; font-weight:700; padding:4px 9px; border-radius:8px;
-    letter-spacing:.5px; animation:live-pulse 1.6s infinite; }
-  #live-badge.hidden { display:none; }
-  @keyframes live-pulse { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:var(--text); background:var(--bg); line-height:1.5;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
 
-  /* Desktop camera view: no live camera feed, so the shutter/flip/compass controls
-     (meaningless without one) are hidden, the import button is made prominent, and a
-     calm placeholder replaces the plain black canvas. Gated by .desktop-cam, which
-     startAppUI()/showCamera() add based on isDesktopDevice() — phones/tablets never
-     get this class and keep the original camera-first layout untouched. */
-  #desktop-cam-placeholder { display:none; }
-  #camera-view.desktop-cam #desktop-cam-placeholder {
-    display:flex; flex-direction:column; gap:14px;
-    position:absolute; inset:0; padding:160px 24px 96px;
-    background:radial-gradient(ellipse at 50% 38%, #233242 0%, #161e27 55%, #0b0f14 100%);
-    overflow-y:auto;
+  header{position:sticky; top:0; background:var(--navy); z-index:50; border-bottom:1px solid #1e293b;}
+  .navrow{display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1080px; margin:0 auto;}
+  .brand{color:#fff; font-weight:700; font-size:18px; display:flex; align-items:center; gap:10px;}
+  .brand img{height:34px; width:34px; border-radius:8px; display:block;}
+  nav{display:flex; gap:28px;}
+  nav a{color:#cbd5e1; font-size:14px;}
+  nav a:hover{color:#fff;}
+  .nav-cta{background:var(--teal); color:#fff !important; padding:9px 18px; border-radius:8px; font-weight:600; font-size:14px;}
+
+  .hero{background:linear-gradient(180deg,var(--navy),var(--navy2)); color:#fff; padding:64px 0 0;}
+  .hero-grid{display:grid; grid-template-columns:1.05fr 1fr; gap:40px; align-items:center; padding-bottom:56px;}
+  .eyebrow{color:var(--teal-light); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:14px;}
+  .hero h1{font-size:34px; font-weight:800; margin:0 0 18px; line-height:1.2;}
+  .hero p{color:#cbd5e1; margin:0 0 28px; font-size:16px;}
+  .cta-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+  .btn-primary{background:var(--teal); color:#fff; padding:14px 28px; border-radius:10px; font-weight:700; font-size:15px; display:inline-block;}
+  .btn-secondary{background:transparent; color:#fff; border:1px solid #475569; padding:14px 28px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;}
+  .fine{color:#94a3b8; font-size:13px;}
+  .hero-img-wrap{position:relative; border-radius:16px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.4);}
+  .hero-img-wrap img{width:100%; height:380px; object-fit:cover; display:block;}
+  .hero-badge{position:absolute; bottom:14px; left:14px; background:rgba(15,23,42,.88); color:#fff; font-size:13px;
+    font-weight:700; padding:8px 14px; border-radius:10px;}
+  @media (max-width:760px){ .hero-grid{grid-template-columns:1fr;} .hero h1{font-size:26px;} .hero-img-wrap img{height:260px;} }
+
+  .stats-strip{background:#fff; border-bottom:1px solid var(--line);}
+  .stats{display:flex; justify-content:center; gap:64px; padding:36px 0; flex-wrap:wrap; text-align:center;}
+  .stat-num{font-size:30px; font-weight:800; color:var(--navy);}
+  .stat-label{color:var(--muted); font-size:13px; margin-top:4px;}
+
+  section{padding:64px 0;}
+  .section-head{text-align:center; max-width:640px; margin:0 auto 44px;}
+  .section-head .eyebrow{color:var(--teal); text-align:center;}
+  .section-head h2{font-size:28px; font-weight:800; color:var(--navy); margin-bottom:10px;}
+  .section-head p{color:var(--muted); font-size:15px;}
+
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
+  .step-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:28px;}
+  .step-num{width:34px; height:34px; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; margin-bottom:16px;}
+  .step-card h3{font-size:17px; margin-bottom:8px; color:var(--navy);}
+  .step-card p{color:var(--muted); font-size:14px;}
+
+  .compare{background:#fff;}
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .compare-col{border-radius:14px; padding:24px; border:1px solid var(--line);}
+  .compare-col.bad{background:#fef2f2;}
+  .compare-col.good{background:#f0fdfa;}
+  .compare-col h4{font-size:14px; font-weight:700; margin-bottom:14px; color:var(--navy);}
+  .file-row{font-family:ui-monospace,Menlo,monospace; font-size:13px; padding:7px 0; border-bottom:1px dashed var(--line); color:var(--muted);}
+  .compare-col.good .file-row{color:var(--navy); font-family:-apple-system,sans-serif; font-weight:600;}
+  .compare-caption{margin-top:14px; font-size:13px; color:var(--muted); text-align:center;}
+  .thumb-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .thumb-grid figure{position:relative; aspect-ratio:1; border-radius:8px; overflow:hidden; background:#e2e8f0;}
+  .thumb-grid img{width:100%; height:100%; object-fit:cover; display:block;}
+  .compare-col.bad .thumb-grid figcaption{position:absolute; top:5px; left:5px; background:rgba(220,38,38,.9); color:#fff;
+    font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; font-family:ui-monospace,Menlo,monospace;}
+  .compare-col.good .thumb-grid figcaption{position:absolute; left:0; right:0; bottom:0; background:linear-gradient(transparent,rgba(15,23,42,.88));
+    color:#fff; font-size:11px; font-weight:600; padding:14px 6px 5px;}
+
+  .features{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
+  .feature-card{padding:24px;}
+  .feature-card h3{font-size:16px; margin-bottom:8px; color:var(--navy);}
+  .feature-card p{color:var(--muted); font-size:14px;}
+
+  .testimonials{background:#fff;}
+  .test-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
+  .test-card{border:1px solid var(--line); border-radius:14px; padding:24px;}
+  .stars{color:#f59e0b; margin-bottom:12px; font-size:14px;}
+  .test-quote{font-size:14px; color:var(--text); margin-bottom:16px;}
+  .test-name{font-weight:700; font-size:13px;}
+  .test-org{color:var(--muted); font-size:12px;}
+  .test-tag{display:inline-block; margin-top:10px; background:#f0fdfa; color:var(--teal); font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px;}
+
+  .final-cta{background:linear-gradient(180deg,var(--navy),var(--navy2)); color:#fff; text-align:center;}
+  .final-cta h2{font-size:28px; margin-bottom:12px;}
+  .final-cta p{color:#cbd5e1; margin-bottom:26px;}
+
+  footer{background:var(--navy); color:#94a3b8; padding:48px 0 24px; font-size:13px;}
+  .footer-top{display:flex; justify-content:space-between; flex-wrap:wrap; gap:32px; margin-bottom:32px;}
+  .footer-cols{display:flex; gap:48px; flex-wrap:wrap;}
+  .footer-col h5{color:#fff; font-size:13px; margin-bottom:12px;}
+  .footer-col a{display:block; color:#94a3b8; margin-bottom:8px; font-size:13px;}
+  .footer-bottom{border-top:1px solid #1e293b; padding-top:20px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+
+  @media (max-width:760px){
+    .steps, .features, .test-grid, .compare-grid{grid-template-columns:1fr;}
+    .stats{gap:32px;}
+    .hero h1{font-size:28px;}
+    nav{display:none;}
   }
-
-  /* Project gate — blocks the live camera feed (no getUserMedia call at all) until
-     a real project exists/is active. Centered card, same dark radial treatment as
-     the desktop placeholder so it reads as part of the same app, not an error state. */
-  #project-gate { display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:14px; position:absolute; inset:0; padding:24px; text-align:center; z-index:60;
-    background:radial-gradient(ellipse at 50% 38%, #233242 0%, #161e27 55%, #0b0f14 100%); }
-  #project-gate.hidden { display:none; }
-  #project-gate-icon { font-size:40px; opacity:.85; }
-  #project-gate-text { font-size:15px; font-weight:700; color:#e8e8e8; max-width:280px; line-height:1.45; }
-  #project-gate-actions { display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px; margin-top:6px; }
-  #project-gate-actions button { background:#0a84ff; border:none; border-radius:14px; color:#fff;
-    font-size:14px; font-weight:700; padding:13px 18px; font-family:inherit;
-    -webkit-appearance:none; appearance:none; box-shadow:0 4px 16px rgba(10,132,255,.35); }
-  #project-gate-select { background:rgba(255,255,255,.08) !important; box-shadow:none !important;
-    border:1px solid rgba(255,255,255,.18) !important; }
-
-  /* Camera-start confirmation — appears once right after the gate above clears
-     (project just created/selected), so the camera doesn't engage silently in the
-     background of that action. Same visual language as the gate. */
-  #camera-start-prompt { display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:12px; position:absolute; inset:0; padding:24px; text-align:center; z-index:60;
-    background:radial-gradient(ellipse at 50% 38%, #233242 0%, #161e27 55%, #0b0f14 100%); }
-  #camera-start-prompt.hidden { display:none; }
-  #camera-start-icon { font-size:36px; }
-  #camera-start-text { font-size:15px; font-weight:700; color:#e8e8e8; max-width:280px; }
-  #camera-start-project-name { color:#5ec8ff; }
-  #camera-start-actions { display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px; margin-top:4px; }
-  #camera-start-actions button { background:#0a84ff; border:none; border-radius:14px; color:#fff;
-    font-size:14px; font-weight:700; padding:13px 18px; font-family:inherit;
-    -webkit-appearance:none; appearance:none; box-shadow:0 4px 16px rgba(10,132,255,.35); }
-  #camera-start-pdf { background:rgba(255,255,255,.08) !important; box-shadow:none !important;
-    border:1px solid rgba(255,255,255,.18) !important; }
-  #camera-start-sub { font-size:12px; color:#97a1ab; max-width:260px; line-height:1.4; }
-
-  /* Property summary card — context for which property is active without opening
-     the Folders modal, plus a per-category photo count so a missing section
-     (e.g. Roof: 0) is visible before a report ever gets generated. */
-  #dsk-summary-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
-    border-radius:12px; padding:12px 16px; flex:0 0 auto; }
-  #dsk-summary-card.hidden { display:none; }
-  #dsk-summary-header { display:flex; align-items:center; gap:8px; }
-  #dsk-summary-icon { font-size:16px; }
-  #dsk-summary-name { font-size:15px; font-weight:700; color:#e8e8e8; flex:1; min-width:0;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #dsk-summary-count { font-size:12px; color:#97a1ab; font-weight:600; }
-  #dsk-cat-breakdown { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-  .dsk-cat-pill { font-size:12px; font-weight:600; color:#cfd6dc; background:rgba(255,255,255,.07);
-    border-radius:8px; padding:4px 9px; }
-  .dsk-cat-pill.dsk-cat-empty { color:#ffb340; background:rgba(255,179,64,.12); }
-
-  /* Drag-and-drop import zone — the placeholder's main body. Dragging files from
-     the desktop's file manager straight onto this area is faster than clicking
-     through a file picker every time. */
-  #dsk-dropzone { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
-    justify-content:center; gap:8px; text-align:center; padding:20px 24px;
-    border:2px dashed rgba(255,255,255,.18); border-radius:14px; }
-  #dsk-dropzone.drag-over { border-color:#0a84ff; background:rgba(10,132,255,.08); }
-  #desktop-cam-icon { font-size:40px; opacity:.85; }
-  #desktop-cam-text { font-size:15px; font-weight:700; color:#e8e8e8; }
-  #desktop-cam-sub { font-size:13px; color:#97a1ab; max-width:320px; line-height:1.45; }
-
-  /* Quick actions — desk users open the Camera tab almost entirely to import and
-     organize, not to shoot a photo, so the actions they actually need are surfaced
-     here instead of requiring a trip to the Gallery tab. */
-  #dsk-quick-actions { display:flex; gap:8px; flex:0 0 auto; }
-  #dsk-quick-actions button { flex:1; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
-    color:#e8e8e8; font-size:12.5px; font-weight:600; padding:10px 6px; border-radius:10px; }
-  #dsk-quick-actions button:disabled { opacity:.4; }
-
-  /* Recent imports — quick visual confirmation that an import landed, without
-     switching to the Gallery tab. */
-  #dsk-recent-strip { display:flex; gap:8px; overflow-x:auto; flex:0 0 auto; min-height:52px; }
-  #dsk-recent-strip img, #dsk-recent-strip .dsk-recent-icon { width:52px; height:52px; border-radius:8px;
-    object-fit:cover; flex:0 0 auto; background:#222; }
-  #dsk-recent-strip .dsk-recent-icon { display:flex; align-items:center; justify-content:center; font-size:20px; }
-  #dsk-recent-empty { font-size:12px; color:#6c757d; align-self:center; }
-  #camera-view.desktop-cam #shutter-wrap,
-  #camera-view.desktop-cam #flip-cam,
-  #camera-view.desktop-cam #compass-toggle,
-  #camera-view.desktop-cam #compass-readout { display:none; }
-  /* Desktop never engages a live camera at all (its own placeholder covers that
-     job), so the phone-only project gate / start-camera prompt never apply there. */
-  #camera-view.desktop-cam #project-gate,
-  #camera-view.desktop-cam #camera-start-prompt { display:none; }
-  /* Desktop has no camera of its own to broadcast — "Go Live" (and the record/setup
-     controls that only make sense once broadcasting) are for the field inspector's
-     phone, not here. Only "Watch Live" (viewing the inspector) applies on desktop. */
-  #camera-view.desktop-cam #live-toggle,
-  #camera-view.desktop-cam #live-record-btn,
-  #camera-view.desktop-cam #live-setup-btn { display:none; }
-  #pick-photo-label { display:none; }
-  #camera-view.desktop-cam #pick-photo {
-    position:absolute; bottom:32px; left:50%; transform:translateX(-50%);
-    width:auto; height:auto; border-radius:24px; padding:14px 26px; gap:9px;
-    display:flex; align-items:center; background:#0a84ff; border:none;
-    font-size:15px; font-weight:700; box-shadow:0 4px 16px rgba(10,132,255,.45);
-  }
-  #camera-view.desktop-cam #pick-photo-icon { font-size:19px; }
-  #camera-view.desktop-cam #pick-photo-label { display:inline; }
-
-  /* Desk-side "Watch Live" — lets whoever is at the desk join the field inspector's
-     existing Daily.co room as a viewing/talking participant, using the link the
-     inspector already shares via shareLiveLink() when they go live. This is the
-     reverse direction of #live-toggle (which broadcasts this device's own camera). */
-  #watch-live-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px;
-    font-weight:600; padding:8px 12px; border-radius:18px; }
-  #watch-live-btn.hidden { display:none; }
-  /* On desktop, pull Watch Live out of #live-controls (which sits in the old top-left
-     icon row) and put it in the top-right corner, level with #exit-app's top-left
-     placement (same top offset, mirrored to the right edge) so the two "always
-     available" pills bookend the top row instead of Watch Live sitting lower down
-     next to the Create New Project pill. */
-  #camera-view.desktop-cam #watch-live-btn { position:fixed;
-    top:env(safe-area-inset-top, 10px);
-    right:calc(env(safe-area-inset-right, 0px) + 10px); z-index:90; }
-  #watch-live-badge { position:fixed; top:calc(env(safe-area-inset-top, 10px) + 44px);
-    right:calc(env(safe-area-inset-right, 0px) + 10px);
-    background:#0a84ff; color:#fff; font-size:12px; font-weight:700; padding:4px 9px; border-radius:8px;
-    letter-spacing:.5px; }
-  #watch-live-badge.hidden { display:none; }
-  #watch-live-frame-wrap { position:absolute; inset:0; z-index:5; background:#000; }
-  #watch-live-frame-wrap.hidden { display:none; }
-  /* Daily's call-object API (not the prebuilt iframe) is used here so this page has
-     direct pixel access to the remote video — required for the Capture button below,
-     and for the pointer overlay to track mouse position over the actual video frame
-     (cross-origin iframes don't let the parent page see either of those). */
-  #watch-live-video { width:100%; height:100%; object-fit:contain; background:#000; display:block; }
-  #watch-live-pointer-zone { position:absolute; inset:0; cursor:default; }
-  #watch-live-toolbar { position:absolute; bottom:20px; left:0; right:0; z-index:6;
-    display:flex; justify-content:center; gap:10px; }
-  #watch-live-toolbar button { background:rgba(0,0,0,.6); border:1px solid #555; color:#fff;
-    font-size:13px; font-weight:600; padding:10px 16px; border-radius:20px; }
-  #watch-live-mute.muted { background:#cc2b2b; border-color:#cc2b2b; }
-  #watch-live-leave { background:rgba(204,43,43,.85); border-color:#cc2b2b; }
-  #watch-live-close { position:absolute; top:env(safe-area-inset-top, 12px); right:12px; z-index:6;
-    width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid #555;
-    color:#fff; font-size:15px; }
-
-  /* Remote pointer — the desk viewer moves their mouse over the video and this dot
-     shows up at the matching spot on the inspector's own screen, so the desk user can
-     point at something without needing to describe it out loud. Position is computed
-     from normalized (0-1) coordinates sent over Daily's data channel, re-mapped through
-     the same object-fit:cover crop math drawFrame() uses so it lands in the right spot
-     even though the inspector's on-screen view is cropped tighter than the full frame
-     the desk viewer sees. */
-  #live-pointer-dot { position:absolute; width:26px; height:26px; pointer-events:none;
-    z-index:7; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
-  #live-pointer-dot.hidden { display:none; }
-
-  /* Watch Live setup modal */
-  #watch-live-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:80; }
-  #watch-live-modal.active { display:flex; }
-  #watch-live-card { background:#1c1c1e; border-radius:14px; width:86%; max-width:340px; padding:18px; }
-  #watch-live-card h3 { margin:0 0 10px; font-size:15px; }
-  #watch-live-help { font-size:13px; color:#aaa; line-height:1.4; margin:0 0 14px; }
-  #watch-live-input { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; margin-bottom:14px; }
-  #watch-live-actions { display:flex; gap:8px; }
-  #watch-live-actions button { flex:1; padding:10px 4px; border-radius:8px; border:none; font-size:12.5px; font-weight:600; }
-  #watch-live-cancel { background:#3a3a3c; color:#fff; }
-  #watch-live-join { background:#0a84ff; color:#fff; }
-
-  /* Live View setup modal */
-  #live-setup-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:80; }
-  #live-setup-modal.active { display:flex; }
-  #live-setup-card { background:#1c1c1e; border-radius:14px; width:86%; max-width:340px; padding:18px; }
-  #live-setup-card h3 { margin:0 0 10px; font-size:15px; }
-  #live-setup-help { font-size:13px; color:#aaa; line-height:1.4; margin:0 0 14px; }
-  #live-setup-help a { color:#0a84ff; }
-  #live-room-input { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; margin-bottom:14px; }
-  #live-setup-actions { display:flex; gap:8px; }
-  #live-setup-actions button { flex:1; padding:10px 4px; border-radius:8px; border:none; font-size:12.5px; font-weight:600; }
-  #live-setup-generate { background:#2a2a2a; color:#fff; }
-  #live-setup-cancel { background:#3a3a3c; color:#fff; }
-  #live-setup-save { background:#0a84ff; color:#fff; }
-
-  /* ---------- Exit pill (persists across views) ---------- */
-  #exit-app { position:fixed; top:env(safe-area-inset-top, 10px); left:10px; z-index:90;
-    background:rgba(0,0,0,.55); border:1px solid #555; color:#fff; font-size:13px; font-weight:700;
-    padding:8px 14px; border-radius:18px; white-space:nowrap; line-height:1.2;
-    font-family:inherit; -webkit-appearance:none; appearance:none; }
-
-  /* #new-project-btn (the old "+" icon in the top-right corner) has been removed —
-     it duplicated #create-project-pill below, just in a smaller/less discoverable form. */
-
-  /* ---------- "Current Project" and "Create New Project" now live INSIDE the tab bar
-     on phones, sized and styled exactly like the Camera/Gallery tabs (flex:1, same
-     dark pill look) instead of floating as separate blue pills up top — that's what
-     was making the camera screen feel crowded. Base rules below give them the plain
-     tab-bar look by default. The desktop override further down restores the original
-     fixed-position blue-pill treatment for larger screens, where there's room for it
-     and the tab bar isn't the primary nav. ---------- */
-  #project-banner, #create-project-pill { flex:1; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:2px; background:#1c1c1e;
-    border:1px solid #333; border-radius:12px; color:#aaa; padding:10px 0;
-    font-size:13px; font-weight:700; cursor:pointer;
-    font-family:inherit; -webkit-appearance:none; appearance:none; }
-  #project-banner.hidden { display:none; }
-  /* .pill-label/.pill-name are shared by both Current Project and Create New Project so
-     they read as one matched pair — Create New Project used to be a bare "+" plus a single
-     run-on label with no two-tier hierarchy, which made it look visually distinct from
-     Current Project's small-label-over-bold-name treatment. Kept on the original IDs too
-     (instead of just renaming to classes) since project-banner-label/name are also looked
-     up by id in app.js to fill in the active project's name. */
-  #project-banner-label, .pill-label { font-size:8px; font-weight:700; letter-spacing:.07em;
-    text-transform:uppercase; color:#888; }
-  #project-banner-name, .pill-name { display:block; color:#eee; font-size:12px; font-weight:800;
-    letter-spacing:-.01em; max-width:20vw; overflow:hidden; text-overflow:ellipsis;
-    white-space:nowrap; text-align:center; }
-  /* Current Project carries the active project name, so it gets a bigger share of the
-     tab bar than the other three (which are icon/short-label only). */
-  #tabbar #project-banner { flex:1.7; }
-  /* Gallery, Current Project, and Create New Project now match Camera's blue so the tab
-     bar reads as one consistent set instead of one blue tab among three dark ones. */
-  #tabbar #tab-gallery, #tabbar #project-banner, #tabbar #create-project-pill {
-    background:#0a84ff; border-color:#0a84ff; color:#fff; }
-  #tabbar #project-banner-label, #tabbar .pill-label { color:rgba(255,255,255,.85); }
-  #tabbar #project-banner-name, #tabbar .pill-name { color:#fff; }
-
-  /* ---------- "Select Existing Project" pill (desktop only — see phone media query
-     below; on phones the Current Project tab does the same job, so it's hidden). ---------- */
-  #top-pill-row-2 { position:fixed; top:calc(env(safe-area-inset-top, 10px) + 48px);
-    left:50%; transform:translateX(-50%); z-index:89; display:flex; flex-direction:column;
-    align-items:center; gap:8px; max-width:94vw; }
-  /* Sized to match #exit-app exactly (padding/border-radius/font) but keeps the blue
-     fill + glow so it still reads as paired with Create New Project above it. */
-  #select-project-pill { display:flex; align-items:center; justify-content:center;
-    gap:4px; white-space:nowrap; box-sizing:border-box; flex:0 0 auto;
-    background:#0a84ff; border:none; border-radius:18px; padding:8px 14px; color:#fff;
-    font-size:13px; font-weight:700; box-shadow:0 4px 16px rgba(10,132,255,.45); cursor:pointer;
-    font-family:inherit; -webkit-appearance:none; appearance:none; }
-  #select-project-pill.hidden { display:none; }
-
-  /* ---------- Desktop: pull Current Project / Create New Project back out of the tab
-     bar into the original floating blue pills. Selector specificity here is bumped
-     with the #tabbar ancestor so it reliably wins over the plain tab-bar look above. ---------- */
-  @media (min-width: 601px) {
-    #tabbar #project-banner, #tabbar #create-project-pill { position:fixed; flex:0 0 auto;
-      display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap;
-      min-height:54px; box-sizing:border-box; border:none; border-radius:24px; padding:10px 16px;
-      background:#0a84ff; color:#fff; box-shadow:0 4px 16px rgba(10,132,255,.45);
-      font-size:13px; font-weight:700; z-index:89; }
-    #tabbar #create-project-pill { top:calc(env(safe-area-inset-top, 10px) + 48px);
-      left:50%; transform:translateX(-50%); flex-direction:column; gap:1px; }
-    #tabbar #project-banner { top:calc(env(safe-area-inset-top, 10px) + 48px); left:10px;
-      max-width:46vw; min-width:0; flex-direction:column; gap:1px; }
-    #tabbar #project-banner-label, #tabbar .pill-label { color:rgba(255,255,255,.85); font-size:9px; }
-    #tabbar #project-banner-name, #tabbar .pill-name { color:#fff; font-size:16px; max-width:42vw; }
-  }
-
-  /* ---------- Folders modal ---------- */
-  #folders-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:56; }
-  #folders-modal.active { display:flex; }
-  #folders-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:380px;
-    padding:18px; max-height:85vh; overflow-y:auto; }
-  #folders-card h3 { margin:0 0 16px; font-size:16px; }
-  #folders-search-row { margin-bottom:20px; }
-  #folders-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; }
-  #gallery-search-row { margin-bottom:10px; }
-  #gallery-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; }
-  #folders-card .pdf-label { margin:0 0 8px; }
-  #folders-card .pdf-field-row { margin-bottom:20px; }
-  #folders-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:34vh; overflow-y:auto; }
-  #folders-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; }
-  .folder-row { display:flex; align-items:center; gap:8px; background:#2c2c2e; border-radius:10px; padding:10px 12px; }
-  .folder-row.current { border:2px solid #0a84ff; }
-  .folder-row-main { flex:1; min-width:0; }
-  .folder-row-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .folder-row-count { font-size:12px; color:#999; margin-top:2px; }
-  .folder-row button { flex:0 0 auto; background:none; border:none; color:#999; font-size:16px; padding:4px 7px; }
-  .folder-row .folder-del { color:#ff453a; }
-  #folders-actions { display:flex; gap:10px; margin-top:16px; }
-  #folders-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
-  #folders-close { background:#3a3a3c; color:#fff; }
-  #new-folder-add { background:#0a84ff; color:#fff; }
-
-  /* ---------- Pull from Drive modal (tasks #126-128) ---------- */
-  #drive-pull-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:56; }
-  #drive-pull-modal.active { display:flex; }
-  #drive-pull-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:380px;
-    padding:18px; max-height:85vh; overflow-y:auto; }
-  #drive-pull-card h3 { margin:0 0 14px; font-size:16px; }
-  #drive-pull-status { color:#999; font-size:13px; text-align:center; padding:10px 0; }
-  #drive-pull-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:50vh; overflow-y:auto; }
-  .drive-pull-row { display:flex; align-items:center; gap:8px; background:#2c2c2e; border-radius:10px;
-    padding:10px 12px; cursor:pointer; }
-  .drive-pull-row-name { flex:1; min-width:0; font-size:14px; font-weight:600; white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; }
-  .drive-pull-row-tag { font-size:11px; color:#0a84ff; font-weight:700; flex:0 0 auto; }
-  #drive-pull-actions { display:flex; gap:10px; margin-top:16px; }
-  #drive-pull-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px;
-    font-weight:600; background:#3a3a3c; color:#fff; }
-
-  /* ---------- Naming overlay ---------- */
-  /* z-index:10 so this always sits above the Watch Live overlay (z-index up to 7) —
-     capturing a photo during Watch Live opens this overlay on top of the live video. */
-  #naming-overlay { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; z-index:10; }
-  #naming-overlay.hidden { display:none; }
-  #naming-photo { flex:1; position:relative; overflow:hidden; }
-  #naming-photo img { width:100%; height:100%; object-fit:cover; }
-  #mic-indicator { position:absolute; top:env(safe-area-inset-top, 16px); left:0; right:0;
-    display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:16px; }
-  #mic-dot { width:14px; height:14px; border-radius:50%; background:#ff3b30; animation:pulse 1.2s infinite; }
-  @keyframes pulse { 0%{opacity:1;} 50%{opacity:.3;} 100%{opacity:1;} }
-  #mic-label { font-size:13px; color:#ddd; text-shadow:0 1px 2px #000; }
-  #import-progress { display:none; font-size:12px; font-weight:700; color:#5ac8fa; text-shadow:0 1px 2px #000; }
-  #transcript-box { position:absolute; bottom:230px; left:16px; right:16px;
-    background:rgba(20,20,20,.85); border-radius:14px; padding:14px 16px; min-height:24px; }
-  #transcript-text { font-size:20px; font-weight:600; word-break:break-word; }
-  #transcript-text.placeholder { color:#777; font-weight:400; }
-
-  /* Photo-organization tagging — captured at naming time so reports come out
-     already grouped into a walkthrough (Exterior/Roof/Interior) instead of needing
-     a separate sorting pass before generating a report. Room/area naming itself
-     still comes entirely from the voice capture above — this row only sets the
-     report section, plus elevation for Exterior photos. */
-  #naming-tag-row { display:flex; flex-direction:column; gap:6px; padding:0 16px 8px; }
-  #naming-cat-row { display:flex; gap:6px; }
-  #naming-cat-row button { flex:1; background:#1c1c1e; color:#bbb; border:1px solid #3a3a3c;
-    border-radius:8px; padding:7px 2px; font-size:11.5px; font-weight:600; }
-  #naming-cat-row button.active { background:#0a84ff; color:#fff; border-color:#0a84ff; }
-  #naming-subloc-dir { display:flex; gap:6px; }
-  #naming-subloc-dir.hidden { display:none; }
-  #naming-subloc-dir button { flex:1; background:#1c1c1e; color:#bbb; border:1px solid #3a3a3c;
-    border-radius:8px; padding:7px 2px; font-size:10px; font-weight:600; }
-  #naming-subloc-dir button.active { background:#34c759; color:#000; border-color:#34c759; }
-  #naming-subloc-dir button.suggested:not(.active)::after { content:' •'; color:#5ac8fa; }
-  /* Interior room picker — a fixed list (rather than free text) so room labels stay
-     consistent across the whole report instead of however each inspector happened to
-     say it; the voice capture is still what actually names each photo. */
-  #naming-room-row { display:flex; }
-  #naming-room-row.hidden { display:none; }
-  #naming-room-row select { flex:1; background:#1c1c1e; color:#fff; border:1px solid #3a3a3c;
-    border-radius:8px; padding:9px 10px; font-size:14px; font-weight:600; }
-
-  #naming-controls { display:flex; gap:12px; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
-  #naming-controls button { flex:1; padding:14px 0; border-radius:12px; font-size:16px; font-weight:600; border:none; }
-  #btn-retry { background:#2a2a2a; color:#fff; }
-  #btn-edit { background:#2a2a2a; color:#fff; }
-  #btn-save { background:#34c759; color:#000; }
-  #naming-controls button:disabled { opacity:.4; }
-  #naming-controls button { font-size:13px; padding:14px 0; }
-
-  /* ---------- Gallery view ---------- */
-  #gallery-view { flex:1; overflow-y:auto; padding:10px; display:none; background:#0a0a0a; }
-  #gallery-view.active { display:block; }
-  #gallery-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;
-    padding:8px 6px 14px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 156px); }
-  #gallery-header h1 { font-size:20px; margin:0; flex:0 0 100%; }
-  #gallery-header-actions { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
-  #export-btn, #select-btn, #reorder-btn, #pdf-all-btn, #attach-doc-btn, #backup-btn, #drive-sync-btn, #drive-pull-btn, #drive-link-btn, #account-btn { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:7px 10px; font-size:12.5px; font-weight:600; flex:1 1 auto; text-align:center; }
-  #export-btn:disabled, #pdf-all-btn:disabled, #backup-btn:disabled, #drive-sync-btn:disabled { background:#333; color:#777; }
-  #select-btn.active, #reorder-btn.active { background:#fff; color:#0a84ff; }
-  /* Export quality popover — folds "Save Originals" into the Export/Zip button as a choice,
-     instead of a separate always-visible button, to save header space (task: combine export options). */
-  .export-btn-wrap { position:relative; flex:1 1 auto; }
-  .export-btn-wrap #export-btn { width:100%; }
-  #export-quality-menu { display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px;
-    background:#2c2c2e; border-radius:10px; padding:6px; z-index:40; box-shadow:0 8px 22px rgba(0,0,0,.45); }
-  #export-quality-menu.active { display:flex; flex-direction:column; gap:4px; }
-  #export-quality-menu button { background:#3a3a3c; color:#fff; border:none; border-radius:7px;
-    padding:9px 10px; font-size:12.5px; font-weight:600; text-align:left; }
-  #export-quality-menu button:active { background:#0a84ff; }
-  #export-quality-menu .export-quality-sub { display:block; font-size:11px; font-weight:400; color:#9a9a9e; margin-top:1px; }
-  #grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
-  .thumb { position:relative; aspect-ratio:1; background:#222; border-radius:8px; overflow:hidden; touch-action:manipulation; }
-  .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-  .thumb .label { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(transparent,rgba(0,0,0,.85));
-    color:#fff; font-size:11px; padding:14px 5px 4px; line-height:1.2; }
-  .thumb .del { position:absolute; top:4px; right:4px; width:22px; height:22px; background:rgba(0,0,0,.6);
-    border-radius:50%; color:#fff; font-size:13px; border:none; }
-  .thumb .select-dot { position:absolute; top:4px; left:4px; width:22px; height:22px; border-radius:50%;
-    border:2px solid #fff; background:rgba(0,0,0,.35); display:none; }
-  .thumb.selected .select-dot { background:#0a84ff; border-color:#0a84ff; }
-  .thumb.selected .select-dot::after { content:'✓'; color:#fff; font-size:13px; font-weight:700;
-    display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
-  .thumb .backup-badge { position:absolute; bottom:4px; right:4px; width:18px; height:18px; border-radius:50%;
-    background:#2ecc71; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center;
-    justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); }
-  #grid.select-mode .select-dot { display:block; }
-  #grid.select-mode .del { display:none; }
-  #grid.reorder-mode .del { display:none; }
-  /* Must be static (not toggled via JS on pointerdown) — iOS Safari decides whether a
-     touch starts a page scroll before any JS handler runs, so the touch-action value
-     has to already be in place when reorder mode is switched on, before the drag begins. */
-  #grid.reorder-mode .thumb { touch-action:none; }
-  .thumb .drag-handle { position:absolute; top:4px; left:4px; width:26px; height:26px; border-radius:50%;
-    background:rgba(0,0,0,.55); color:#fff; font-size:14px; display:none; align-items:center; justify-content:center; }
-  #grid.reorder-mode .drag-handle { display:flex; }
-  .thumb.dragging { opacity:.55; box-shadow:0 10px 24px rgba(0,0,0,.6); z-index:20; transition:none; }
-  .thumb.drag-over { outline:2px solid #0a84ff; }
-  #empty-state { color:#777; text-align:center; padding:60px 20px; font-size:14px; }
-
-  /* ---------- Bulk delete bar ---------- */
-  #bulk-bar { display:none; flex-direction:column; gap:8px;
-    background:#1c1c1e; border-radius:12px; padding:10px 14px; margin-bottom:10px; }
-  #bulk-bar.active { display:flex; }
-  #bulk-count { font-size:14px; color:#ddd; font-weight:600; }
-  #bulk-bar-actions { display:flex; flex-wrap:wrap; gap:6px; }
-  #select-all-btn, #bulk-rename, #bulk-markup, #bulk-crop, #bulk-remove-markup, #bulk-categorize, #bulk-pdf, #bulk-share { background:#2a2a2a; color:#fff; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
-  #bulk-rename:disabled, #bulk-markup:disabled, #bulk-crop:disabled, #bulk-remove-markup:disabled, #bulk-categorize:disabled, #bulk-pdf:disabled, #bulk-share:disabled { color:#666; }
-  #bulk-delete { background:#3a1414; color:#ff453a; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
-  #bulk-delete:disabled { color:#666; }
-
-  /* Rename modal */
-  #rename-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:75; }
-  #rename-modal.active { display:flex; }
-  #rename-card { background:#1c1c1e; border-radius:14px; width:84%; max-width:320px; padding:18px; }
-  #rename-card h3 { margin:0 0 12px; font-size:15px; }
-  #rename-input { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:16px; margin-bottom:14px; }
-  #rename-actions { display:flex; gap:10px; }
-  #rename-actions button { flex:1; padding:10px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
-  #rename-cancel { background:#3a3a3c; color:#fff; }
-  #rename-save { background:#0a84ff; color:#fff; }
-
-  /* Recategorize modal — lets photos that landed in "Additional Photos" (Other) because
-     they were only ever given a voice name get moved into a real report section
-     (Exterior/Roof/Interior) after the fact, without retaking or re-naming the photo. */
-  #recat-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:75; }
-  #recat-modal.active { display:flex; }
-  #recat-card { background:#1c1c1e; border-radius:14px; width:84%; max-width:340px; padding:18px; }
-  #recat-card h3 { margin:0 0 12px; font-size:15px; color:#fff; }
-  #recat-cat-row { display:flex; gap:6px; margin-bottom:10px; }
-  #recat-cat-row button { flex:1; background:#2c2c2e; color:#bbb; border:1px solid #3a3a3c;
-    border-radius:8px; padding:8px 2px; font-size:12px; font-weight:600; }
-  #recat-cat-row button.active { background:#0a84ff; color:#fff; border-color:#0a84ff; }
-  #recat-subloc-dir { display:flex; gap:6px; margin-bottom:14px; }
-  #recat-subloc-dir.hidden { display:none; }
-  #recat-subloc-dir button { flex:1; background:#2c2c2e; color:#bbb; border:1px solid #3a3a3c;
-    border-radius:8px; padding:8px 2px; font-size:10.5px; font-weight:600; }
-  #recat-subloc-dir button.active { background:#34c759; color:#000; border-color:#34c759; }
-  #recat-room-row { display:flex; margin-bottom:14px; }
-  #recat-room-row.hidden { display:none; }
-  #recat-room-row select { flex:1; background:#2c2c2e; color:#fff; border:1px solid #3a3a3c;
-    border-radius:8px; padding:9px 10px; font-size:14px; font-weight:600; }
-  #recat-actions { display:flex; gap:10px; }
-  #recat-actions button { flex:1; padding:10px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
-  #recat-cancel { background:#3a3a3c; color:#fff; }
-  #recat-save { background:#0a84ff; color:#fff; }
-
-  /* PDF report options modal */
-  #pdf-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:55; }
-  #pdf-modal.active { display:flex; }
-  #pdf-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:360px;
-    padding:18px; max-height:85vh; overflow-y:auto; }
-  #pdf-card h3 { margin:0 0 14px; font-size:16px; }
-  .pdf-label { font-size:12px; color:#999; font-weight:600; margin:12px 0 6px; }
-  .pdf-field-row { display:flex; gap:8px; align-items:center; }
-  .pdf-field-row input { flex:1; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; }
-  .pdf-field-row textarea { flex:1; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; }
-  .pdf-field-row:has(textarea) { align-items:flex-start; }
-  .mic-btn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; background:#2c2c2e;
-    border:1px solid #3a3a3c; color:#fff; font-size:16px; }
-  .mic-btn.listening { background:#ff3b30; border-color:#ff3b30; }
-  .mic-btn-sm { width:30px; height:30px; font-size:13px; }
-  .pdf-city-group { display:flex; gap:6px; align-items:center; flex:1; min-width:0; }
-  .pdf-city-group input { min-width:0; }
-  #pdf-per-page-options { display:flex; gap:8px; }
-  .pp-opt { flex:1; padding:10px 0; border-radius:8px; border:1px solid #3a3a3c;
-    background:#2c2c2e; color:#ccc; font-size:14px; font-weight:600; }
-  .pp-opt.active { background:#0a84ff; border-color:#0a84ff; color:#fff; }
-  #pdf-modal-actions { display:flex; gap:10px; margin-top:18px; }
-  #pdf-modal-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
-  #pdf-cancel { background:#3a3a3c; color:#fff; }
-  #pdf-save-camera { background:#30a14e; color:#fff; }
-  #pdf-generate { background:#0a84ff; color:#fff; }
-  #pdf-generate:disabled { background:#333; color:#777; }
-  /* PDF preview overlay — full-screen, shown after Preview builds the report */
-  #pdf-preview-modal { position:fixed; inset:0; background:#000; display:none;
-    flex-direction:column; z-index:56; }
-  #pdf-preview-modal.active { display:flex; }
-  #pdf-preview-topbar { display:flex; align-items:center; gap:8px; padding:10px 12px;
-    background:#1c1c1e; border-bottom:1px solid #3a3a3c; }
-  #pdf-preview-title { flex:1; text-align:center; font-size:14px; font-weight:600; color:#fff; }
-  #pdf-preview-topbar button { padding:9px 12px; border-radius:8px; border:none;
-    font-size:13px; font-weight:600; white-space:nowrap; }
-  #pdf-preview-back { background:#3a3a3c; color:#fff; }
-  #pdf-preview-send { background:#0a84ff; color:#fff; }
-  #pdf-preview-send:disabled { background:#333; color:#777; }
-  /* Scrollable stack of full pages — each .pdf-preview-page is sized to exactly the
-     container's viewport (scroll-snap-align:start) so swiping/scrolling lands cleanly on
-     one full page at a time, the same feel as a native paginated viewer. */
-  #pdf-preview-frame { flex:1; width:100%; overflow-y:auto; background:#444;
-    scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; }
-  .pdf-preview-page { width:100%; height:100%; display:flex; align-items:center;
-    justify-content:center; scroll-snap-align:start; box-sizing:border-box; }
-  .pdf-preview-page canvas { background:#fff; box-shadow:0 1px 8px rgba(0,0,0,.4); }
-  #pdf-preview-loading { color:#aaa; font-size:14px; text-align:center; padding:40px 20px; }
-
-  /* Desktop project-creation prompt — small modal, see comment at its HTML */
-  #dsk-project-prompt-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:55; }
-  #dsk-project-prompt-modal.active { display:flex; }
-  #dsk-project-prompt-card { background:#1c1c1e; border-radius:14px; width:90%; max-width:380px;
-    padding:22px; text-align:center; }
-  #dsk-project-prompt-card h3 { margin:0 0 10px; font-size:16px; color:#fff; }
-  #dsk-project-prompt-sub { font-size:13px; color:#97a1ab; line-height:1.4; margin:0 0 18px; }
-  #dsk-project-prompt-actions { display:flex; gap:10px; }
-  #dsk-project-prompt-actions button { flex:1; padding:11px 0; border-radius:8px; border:none;
-    font-size:14px; font-weight:600; }
-  #dsk-project-prompt-skip { background:#3a3a3c; color:#fff; }
-  #dsk-project-prompt-pdf { background:#0a84ff; color:#fff; }
-
-  #pdf-divider { border-top:1px solid #3a3a3c; margin:18px 0 4px; }
-  #pdf-section-label { font-size:11px; color:#777; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
-  #pdf-logo-pick, #pdf-logo-clear { background:#2c2c2e; color:#fff; border:1px solid #3a3a3c; border-radius:8px;
-    padding:9px 12px; font-size:13px; font-weight:600; }
-  #pdf-logo-clear { color:#ff453a; }
-  #pdf-scan-source { width:100%; background:#1b3a5e; color:#fff; border:1px solid #2c5d94; border-radius:8px;
-    padding:11px 8px; font-size:14px; font-weight:600; -webkit-appearance:none; appearance:none; }
-  #pdf-scan-source:disabled { background:#2c2c2e; border-color:#3a3a3c; color:#777; }
-  #pdf-scan-source option { background:#1c1c1e; color:#fff; }
-  #pdf-scan-status { font-size:12px; color:#999; margin:6px 2px 14px; min-height:14px; }
-  #pdf-scan-status.error { color:#ff453a; }
-  #pdf-logo-preview { margin-top:8px; }
-  #pdf-logo-preview.hidden, #pdf-logo-file.hidden { display:none; }
-  #pdf-logo-preview img { max-width:140px; max-height:50px; background:#fff; border-radius:6px; padding:4px; }
-  #pdf-info-form { display:block; }
-  #pdf-csz-row, .pdf-csz-row-shared { display:flex; gap:8px; }
-  #pdf-csz-row input, .pdf-csz-row-shared input { flex:1; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; min-width:0; }
-  .pdf-state-group, .pdf-zip-group { display:flex; gap:4px; align-items:center; min-width:0; }
-  .pdf-state-group { flex:0 0 92px; }
-  .pdf-zip-group { flex:1; }
-  #pdf-state-input, #pdf-company-state-input { text-align:center; }
-  #pdf-zip-input, #pdf-company-zip-input { flex:0 0 90px; }
-  #pdf-coverphoto-strip { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px; }
-  .pdf-coverphoto-thumb { flex:0 0 auto; width:64px; height:64px; border-radius:8px; object-fit:cover;
-    border:2px solid transparent; background:#2c2c2e; padding:0; }
-  .pdf-coverphoto-thumb.selected { border-color:#0a84ff; }
-  .pdf-coverphoto-none { display:flex; align-items:center; justify-content:center; color:#999; font-size:11px; font-weight:600; }
-
-  #toast { position:fixed; bottom:90px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:60; }
-  #toast div { background:rgba(40,40,40,.95); color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; opacity:0; transition:opacity .25s; }
-
-  /* ---------- Photo detail modal ---------- */
-  #detail-modal { position:fixed; inset:0; background:#000; display:none; flex-direction:column; z-index:70; }
-  #detail-modal.active { display:flex; }
-  #detail-topbar { display:flex; justify-content:space-between; align-items:center;
-    padding:calc(env(safe-area-inset-top,12px) + 8px) 16px 10px; }
-  #detail-topbar button { background:none; border:none; color:#0a84ff; font-size:16px; font-weight:600; }
-  #detail-name { color:#fff; font-size:14px; font-weight:600; max-width:60%; overflow:hidden;
-    text-overflow:ellipsis; white-space:nowrap; }
-  #detail-img-wrap { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  #detail-img-wrap img, #detail-img-wrap video { max-width:100%; max-height:100%; object-fit:contain; }
-  #detail-video.hidden, #detail-img.hidden { display:none; }
-  .video-thumb-icon { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-    font-size:28px; background:#1a1a1a; }
-  .pdf-thumb-icon { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-    font-size:28px; background:#241a14; }
-  /* Swapped in once renderPdfThumb finishes rendering the PDF's first page via pdf.js — the
-     plain 📄 icon (.pdf-thumb-icon, base styles above) stays as the fallback look while
-     that's in flight or if rendering fails, so there's never an empty/broken thumbnail. */
-  .pdf-thumb-icon.pdf-thumb-rendered { background-color:#fff; background-size:cover;
-    background-position:top center; }
-  #detail-pdf-tile { width:100%; height:100%; display:flex; flex-direction:column; align-items:center;
-    justify-content:center; gap:16px; }
-  #detail-pdf-tile.hidden { display:none; }
-  #detail-pdf-icon { font-size:64px; }
-  #detail-pdf-open { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:10px 18px;
-    font-size:14px; font-weight:600; }
-  #detail-actions { display:flex; flex-wrap:wrap; gap:10px; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); }
-  #detail-actions button { flex:1; min-width:130px; padding:13px 0; border-radius:12px; font-size:14px; font-weight:600; border:none; }
-  #detail-annotate { background:#2a2a2a; color:#fff; }
-  #detail-crop { background:#2a2a2a; color:#fff; }
-  #detail-remove-markup { background:#3a2a14; color:#ff9f0a; }
-  #detail-remove-markup.hidden { display:none; }
-  #detail-rename { background:#2a2a2a; color:#fff; }
-  #detail-delete { background:#3a1414; color:#ff453a; }
-
-  /* ---------- Annotation editor ---------- */
-  #annotate-overlay { position:fixed; inset:0; background:#000; display:none; flex-direction:column; z-index:80; }
-  #annotate-overlay.active { display:flex; }
-  #annotate-topbar { display:flex; justify-content:space-between; align-items:center;
-    padding:calc(env(safe-area-inset-top,12px) + 8px) 16px 10px; }
-  #annotate-topbar button { background:none; border:none; font-size:16px; font-weight:600; }
-  #annotate-cancel { color:#ff453a; }
-  #annotate-save { color:#34c759; }
-  #annotate-canvas-wrap { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
-  #annotate-canvas { touch-action:none; background:#111; max-width:100%; max-height:100%; }
-  #annotate-toolbar { display:flex; flex-direction:column; gap:10px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#0d0d0d; }
-  #annotate-tools { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
-  #annotate-tools button { flex:0 0 auto; width:46px; height:42px; border-radius:10px; background:#222;
-    border:1px solid #333; color:#ccc; font-size:18px; }
-  #annotate-tools button.active { background:#0a84ff; border-color:#0a84ff; color:#fff; }
-  #annotate-bottom-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  #annotate-colors { display:flex; gap:8px; }
-  .color-swatch { width:30px; height:30px; border-radius:50%; border:2px solid transparent; }
-  .color-swatch.active { border-color:#fff; }
-  #annotate-undo-clear { display:flex; gap:8px; }
-  #annotate-undo-clear button { background:#222; border:1px solid #333; color:#ccc; border-radius:8px; padding:8px 12px; font-size:13px; font-weight:600; }
-
-  /* ---------- Crop / zoom / resize editor ---------- */
-  #crop-overlay { position:fixed; inset:0; background:#000; display:none; flex-direction:column; z-index:80; }
-  #crop-overlay.active { display:flex; }
-  #crop-topbar { display:flex; justify-content:space-between; align-items:center;
-    padding:calc(env(safe-area-inset-top,12px) + 8px) 16px 10px; }
-  #crop-topbar button { background:none; border:none; font-size:16px; font-weight:600; }
-  #crop-cancel { color:#ff453a; }
-  #crop-save { color:#34c759; }
-  #crop-canvas-wrap { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
-  #crop-frame { position:relative; overflow:hidden; touch-action:none; border:2px solid #fff; background:#111; }
-  #crop-img { position:absolute; top:50%; left:50%; max-width:none; max-height:none; touch-action:none; user-select:none; -webkit-user-select:none; }
-  #crop-toolbar { display:flex; flex-direction:column; gap:10px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#0d0d0d; }
-  #crop-aspect-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
-  #crop-aspect-row button { flex:0 0 auto; padding:8px 14px; border-radius:10px; background:#222;
-    border:1px solid #333; color:#ccc; font-size:13px; font-weight:600; }
-  #crop-aspect-row button.active { background:#0a84ff; border-color:#0a84ff; color:#fff; }
-  #crop-reset-row { display:flex; justify-content:flex-end; }
-  #crop-reset { background:#222; border:1px solid #333; color:#ccc; border-radius:8px; padding:8px 12px; font-size:13px; font-weight:600; }
 </style>
-<!--
-  Google Places Autocomplete for the property address field. This key is meant to be used
-  client-side (unlike the Anthropic/Stripe keys, which must stay server-only) — secure it
-  in Google Cloud Console by restricting it to HTTP referrer https://namethatphoto.com/* so
-  it can't be used from anywhere else, rather than hiding it.
-  Replace YOUR_GOOGLE_PLACES_API_KEY below once you have a key from console.cloud.google.com
-  with the "Places API" and "Maps JavaScript API" enabled and billing turned on.
--->
-<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARZZ8UWE_-1cEhFqqgfGo8PbtxkJUil0g&libraries=places&callback=initGoogleAutocomplete"></script>
-<!--
-  Google Identity Services — powers "Sync to Drive" (tasks #29-32). This loads the OAuth
-  token-request popup; the actual Client ID (from Google Cloud Console, scoped to the
-  drive.file scope only — this app can only see/manage files it creates, not the user's
-  whole Drive) lives in app.js next to GOOGLE_DRIVE_CLIENT_ID. No secret here: an OAuth
-  Client ID, like the Maps key above, is meant to be public client-side.
--->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-<div id="app" class="hidden">
 
-  <button id="exit-app" title="Exit app">Exit App</button>
-
-  <div id="top-pill-row-2">
-    <button id="select-project-pill" class="hidden" title="Select existing project"><span>Select Existing Project</span></button>
+<header>
+  <div class="navrow">
+    <div>
+      <div class="brand"><img src="images/logo-icon.png" alt="Name That Photo logo">Name That Photo</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Powered by LeighCore</div>
+    </div>
+    <nav>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#testimonials">Testimonials</a>
+    </nav>
+    <a class="nav-cta" href="/app/">Launch App</a>
   </div>
+</header>
 
-  <div id="camera-view">
-    <video id="preview" autoplay playsinline muted disablePictureInPicture x-webkit-airplay="deny"></video>
-    <canvas id="preview-canvas"></canvas>
-
-    <!-- Shown instead of a live feed until a real project exists/is active — the
-         camera itself never engages (no getUserMedia prompt) while this is up. -->
-    <div id="project-gate">
-      <div id="project-gate-icon">📁</div>
-      <div id="project-gate-text">Create or select a project before shooting photos.</div>
-      <div id="project-gate-actions">
-        <button id="project-gate-create">+ Create New Project</button>
-        <button id="project-gate-select">Select Existing Project</button>
-      </div>
-    </div>
-
-    <!-- Shown once, right after the project gate above is cleared (project created
-         or selected) — lets the adjuster confirm before the camera engages, and
-         optionally jump straight into PDF report info without committing to it,
-         since the inspection isn't done yet. -->
-    <div id="camera-start-prompt" class="hidden">
-      <div id="camera-start-icon">✅</div>
-      <div id="camera-start-text">Project ready: <span id="camera-start-project-name">Project</span></div>
-      <div id="camera-start-actions">
-        <button id="camera-start-go">📷 Start Camera</button>
-        <button id="camera-start-pdf">📄 Add Customer Info Now</button>
-      </div>
-      <div id="camera-start-sub">Customer/claim info is optional here — add it now or later from the PDF report screen.</div>
-    </div>
-
-    <div id="desktop-cam-placeholder">
-      <div id="dsk-summary-card">
-        <div id="dsk-summary-header">
-          <span id="dsk-summary-icon">📁</span>
-          <span id="dsk-summary-name">Project</span>
-          <span id="dsk-summary-count">0 photos</span>
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="eyebrow">Voice-Powered Photo Labeling</div>
+        <h1>You Took 300 Photos. Now What?</h1>
+        <p>Every inspection ends the same way — you're back at your desk, staring at hundreds of unnamed files. Name That Photo fixes it at the inspection. Snap a photo, say the label into your phone, and it's saved. Done before you leave the driveway.</p>
+        <div class="cta-row">
+          <a class="btn-secondary" href="#how-it-works">See How It Works</a>
         </div>
-        <div id="dsk-cat-breakdown"></div>
+        <div class="fine">2-day free trial · Works in Safari on your iPhone</div>
       </div>
-      <div id="dsk-dropzone">
-        <div id="desktop-cam-icon">🖥️</div>
-        <div id="desktop-cam-text">Drag photos or PDFs here, or choose from your library</div>
-        <div id="desktop-cam-sub">Use "Watch Live" to view a remote inspection.</div>
+      <div class="hero-img-wrap">
+        <img src="images/inspector-desk.png" alt="Inspector exhausted at desk after a long day, still facing hundreds of unnamed photos">
+        <div class="hero-badge">Hours spent naming photos — every inspection</div>
       </div>
-      <div id="dsk-quick-actions">
-        <button id="dsk-action-pdf" title="Create PDF for this project">📄 Create Report</button>
-        <button id="dsk-action-attach" title="Attach a PDF (weather report, measurements, etc.)">📎 Attach PDF</button>
-        <button id="dsk-action-drive" title="Sync this project's photos to Google Drive">☁️ Sync to Drive</button>
-        <button id="dsk-action-drive-pull" title="Pull a project's photos down from Google Drive">⬇️ Pull from Drive</button>
-        <button id="dsk-action-drive-link" title="Get a shareable link to this project's synced photos">🔗 Send Link</button>
-        <button id="dsk-action-switch" title="Switch project">🔁 Switch Project</button>
-      </div>
-      <div id="dsk-recent-strip"></div>
     </div>
-    <div id="cam-status"></div>
-    <button id="flip-cam" title="Flip camera">⟲</button>
-    <button id="pick-photo" title="Choose Photos or PDFs from Desktop"><span id="pick-photo-icon">🗄️</span><span id="pick-photo-label">Choose Photos or PDFs from Desktop</span></button>
-    <button id="compass-toggle" title="Stamp compass heading on photo">🧭</button>
-    <div id="compass-readout" class="hidden"></div>
-    <div id="live-controls">
-      <button id="live-toggle" title="Let the homeowner watch live">📡 Go Live</button>
-      <button id="live-record-btn" class="hidden" title="Record this call">⏺ Record</button>
-      <button id="watch-live-btn" title="Connect to this account's field inspector once they go live">👁️ Watch Live</button>
-      <button id="live-setup-btn" title="Live View setup">⚙️</button>
-    </div>
-    <div id="live-badge" class="hidden">● LIVE</div>
-    <div id="watch-live-badge" class="hidden">● WATCHING</div>
-    <input type="file" id="photo-picker" accept="image/*,application/pdf" multiple style="display:none">
-    <div id="shutter-wrap"><button id="shutter"></button></div>
-    <div id="live-pointer-dot" class="hidden">
-      <svg viewBox="0 0 24 24" width="26" height="26">
-        <path d="M2 2 L2 18 L6.5 14.5 L9.5 21 L12.5 19.5 L9.5 13 L16 13 Z" fill="#ff3b30" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div id="watch-live-frame-wrap" class="hidden">
-      <video id="watch-live-video" autoplay playsinline></video>
-      <audio id="watch-live-audio" autoplay></audio>
-      <div id="watch-live-pointer-zone" title="Move your mouse over the video to point at something on the inspector's screen"></div>
-      <div id="watch-live-toolbar">
-        <button id="watch-live-mute" title="Mute/unmute your mic">🎙️ Mic</button>
-        <button id="watch-live-capture" title="Capture this frame as a photo">📷 Capture</button>
-        <button id="watch-live-leave" title="Leave this live session">🚪 Leave</button>
-      </div>
-      <button id="watch-live-close" title="Stop watching">✕</button>
-    </div>
+  </div>
+</section>
 
-    <div id="naming-overlay" class="hidden">
-      <div id="naming-photo"><img id="naming-photo-img" alt="captured photo"></div>
-      <div id="mic-indicator">
-        <div id="import-progress"></div>
-        <div id="mic-dot"></div>
-        <div id="mic-label">Listening… say the photo name</div>
+<div class="stats-strip">
+  <div class="stats wrap">
+    <div><div class="stat-num">150+</div><div class="stat-label">Average photos per inspection</div></div>
+    <div><div class="stat-num">1-2 hrs</div><div class="stat-label">Saved per file on average</div></div>
+    <div><div class="stat-num">Save Hours and Move Files to Completion</div><div class="stat-label">Reclaim the time you used to lose to renaming — get it back for inspections, reports, and your next job.</div></div>
+  </div>
+</div>
+
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">How It Works</div>
+      <h2>Name That Photo changes everything.</h2>
+      <p>No AI guesswork. Just your voice. Label every photo while you're still on site — so your desk work is done before you drive away.</p>
+    </div>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Snap the Photo</h3>
+        <p>Take your inspection photo as you normally would — roof, panel, foundation, whatever you're documenting. Nothing changes about how you shoot.</p>
       </div>
-      <div id="transcript-box"><div id="transcript-text" class="placeholder">Speak now…</div></div>
-      <div id="naming-tag-row">
-        <div id="naming-cat-row">
-          <button class="cat-btn" data-cat="exterior">Exterior</button>
-          <button class="cat-btn" data-cat="roof">Roof</button>
-          <button class="cat-btn" data-cat="interior">Interior</button>
-          <button class="cat-btn active" data-cat="">Other</button>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Say the Label</h3>
+        <p>The app activates your microphone automatically. Just say the name — "Front elevation," "Roof ridge," "Attic insulation" — and it's captured instantly.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Export or Build the Report</h3>
+        <p>Zip up your named photos for any CRM, or generate a branded PDF report right from your phone — cover page, categories, and all.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="compare">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Sound Familiar?</div>
+      <h2>Without vs. with Name That Photo</h2>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-col bad">
+        <h4>WITHOUT NAME THAT PHOTO</h4>
+        <div class="thumb-grid">
+          <figure><img src="images/roof-wind-damage-front-slope.png" alt="Roof wind damage, front slope"><figcaption>IMG_4872.jpg</figcaption></figure>
+          <figure><img src="images/living-room-water-stain-ceiling.png" alt="Living room water stain on ceiling"><figcaption>IMG_4873.jpg</figcaption></figure>
+          <figure><img src="https://images.pexels.com/photos/10252682/pexels-photo-10252682.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Fire damage"><figcaption>DSC_0041.jpg</figcaption></figure>
+          <figure><img src="images/front-elevation-window-wrap-hail-damage.png" alt="Front elevation window wrap hail damage"><figcaption>DSC_0042.jpg</figcaption></figure>
+          <figure><img src="images/living-room-water-damage-wood-floors.png" alt="Living room water damage to wood floors"><figcaption>photo001.jpg</figcaption></figure>
+          <figure><img src="images/roof-hail-damage.jpeg" alt="Roof hail damage"><figcaption>photo002.jpg</figcaption></figure>
         </div>
-        <div id="naming-subloc-dir" class="hidden">
-          <button class="dir-btn" data-dir="Front">Front Elevation</button>
-          <button class="dir-btn" data-dir="Right">Right Elevation</button>
-          <button class="dir-btn" data-dir="Rear">Rear Elevation</button>
-          <button class="dir-btn" data-dir="Left">Left Elevation</button>
+        <div class="compare-caption">Hours of renaming at your desk. Every single time.</div>
+      </div>
+      <div class="compare-col good">
+        <h4>WITH NAME THAT PHOTO</h4>
+        <div class="thumb-grid">
+          <figure><img src="images/roof-wind-damage-front-slope.png" alt="Roof wind damage, front slope"><figcaption>Roof - Front slope wind damage</figcaption></figure>
+          <figure><img src="images/living-room-water-stain-ceiling.png" alt="Living room water stain on ceiling"><figcaption>Living Room - water damage to ceiling</figcaption></figure>
+          <figure><img src="https://images.pexels.com/photos/10252682/pexels-photo-10252682.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Fire damage"><figcaption>Fire Damage — Kitchen</figcaption></figure>
+          <figure><img src="images/front-elevation-window-wrap-hail-damage.png" alt="Front elevation window wrap hail damage"><figcaption>Front Elevation - hail damage to window wrap</figcaption></figure>
+          <figure><img src="images/living-room-water-damage-wood-floors.png" alt="Living room water damage to wood floors"><figcaption>Living Room - water damage to wood floors</figcaption></figure>
+          <figure><img src="images/roof-hail-damage.jpeg" alt="Roof hail damage"><figcaption>Roof - front slope hail damage</figcaption></figure>
         </div>
-        <div id="naming-room-row" class="hidden">
-          <select id="naming-room-select">
-            <option value="">Select room…</option>
-            <option value="Basement">Basement</option>
-            <option value="Bedroom Closet">Bedroom Closet</option>
-            <option value="Breakfast Area">Breakfast Area</option>
-            <option value="Den">Den</option>
-            <option value="Dining Room">Dining Room</option>
-            <option value="Entertainment Room">Entertainment Room</option>
-            <option value="Guest Bathroom">Guest Bathroom</option>
-            <option value="Guest Bedroom">Guest Bedroom</option>
-            <option value="Gym">Gym</option>
-            <option value="Hall Bathroom">Hall Bathroom</option>
-            <option value="Hallway">Hallway</option>
-            <option value="Keeping Room">Keeping Room</option>
-            <option value="Kitchen">Kitchen</option>
-            <option value="Linen Closet">Linen Closet</option>
-            <option value="Living Room">Living Room</option>
-            <option value="Office">Office</option>
-            <option value="Pantry">Pantry</option>
-            <option value="Primary Bathroom">Primary Bathroom</option>
-            <option value="Primary Bedroom">Primary Bedroom</option>
-            <option value="Sitting Area">Sitting Area</option>
-          </select>
+        <div class="compare-caption">Named on-site. Report-ready before you leave.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Features</div>
+      <h2>Built for the way you actually work</h2>
+    </div>
+    <div class="features">
+      <div class="feature-card">
+        <h3>🎙️ Hands-Free Voice Labeling</h3>
+        <p>Your microphone activates the moment you take a photo. Just speak the label naturally — no typing, no tapping, no stopping your workflow.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📱 Works With Your Phone</h3>
+        <p>No special hardware. No new camera. Name That Photo runs on your existing smartphone — the same one you already use to shoot inspections.</p>
+      </div>
+      <div class="feature-card">
+        <h3>⬇️ One-Click Export</h3>
+        <p>When the inspection is done, download all your labeled photos in one click. They're organized and named, ready to drop into any report software or CRM.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="capabilities" style="background:#fff; border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Beyond the Basics</div>
+      <h2>Everything else you need on inspection day</h2>
+      <p>Voice naming is the start. Here's what handles the rest of the job, from organizing photos to delivering the finished report.</p>
+    </div>
+    <div class="features">
+      <div class="feature-card">
+        <h3>🗂️ Smart Organization</h3>
+        <p>Photos sort into categories — exterior elevations, roof, interior rooms — and into per-property projects. Drag to reorder, search, or bulk-recategorize anytime.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📄 Branded PDF Reports</h3>
+        <p>Build a claim-ready report on your phone: cover page with your logo and company info, photos grouped by category, page numbers, and an overall narrative field. Attach claim document PDFs — estimates, contracts, or professional reports — directly to the report.</p>
+      </div>
+      <div class="feature-card">
+        <h3>✏️ Crop, Markup & Compass</h3>
+        <p>Crop or annotate any photo on-site. Turn on the compass and every photo is stamped with the direction you were facing — no more guessing "which way was that?"</p>
+      </div>
+      <div class="feature-card">
+        <h3>☁️ Cloud Sync & Backup</h3>
+        <p>Sync a project to Google Drive, pull it down on another device, or send a shareable link to your office or your customer. Save originals straight to your phone's photo library too.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📡 Live View for Homeowners</h3>
+        <p>Stream your inspection in real time so a homeowner or adjuster can watch from anywhere, with two-way audio. Record the session and save it straight to your gallery.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔍 Document Scanning</h3>
+        <p>Scan or attach a claim form or policy document and the app pulls the claim number and policyholder name automatically — no retyping.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🖥️ Desktop Tools</h3>
+        <p>Drag and drop photos from your desktop into the app to label, crop, and markup them right from your computer — no phone required.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="testimonials" id="testimonials">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Trusted by Inspectors</div>
+      <h2>From solo operators to multi-inspector firms</h2>
+    </div>
+    <div class="test-grid">
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <div class="test-quote">"I used to spend 3 hours after every inspection just renaming photos at my desk. Now I just say the name out loud while I'm shooting and it's done. I've gotten my evenings back."</div>
+        <div class="test-name">Marcus T.</div>
+        <div class="test-org">Precision Home Inspections, TX</div>
+        <div class="test-tag">3 hrs saved per inspection</div>
+      </div>
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <div class="test-quote">"The voice labeling is so natural — I barely notice I'm doing it. By the time I get back to my truck, every photo is already named. My reports go out the same day now."</div>
+        <div class="test-name">Jennifer R.</div>
+        <div class="test-org">Clear View Inspections, FL</div>
+        <div class="test-tag">Same-day report delivery</div>
+      </div>
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <div class="test-quote">"I was skeptical it would work while I'm up on a roof or in a crawl space. Works perfectly. Just say the label and move on. Easiest tool I've ever added to my workflow."</div>
+        <div class="test-name">Dave K.</div>
+        <div class="test-org">Summit Property Inspections, CO</div>
+        <div class="test-tag">Works anywhere on site</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="wrap">
+    <h2>Stop naming photos. Start closing files.</h2>
+    <p>Try Name That Photo on your next inspection.</p>
+    <a class="btn-primary" href="/app/">Launch App</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <div>
+        <div class="brand" style="margin-bottom:8px;"><img src="images/logo-icon.png" alt="Name That Photo logo">Name That Photo</div>
+        <div style="max-width:280px;">Voice-powered photo labeling for home inspectors. Stop naming photos. Start closing files.</div>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h5>Product</h5>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#features">Features</a>
+          <a href="/app/">Launch App</a>
         </div>
-      </div>
-      <div id="naming-controls">
-        <button id="btn-retry">Retake</button>
-        <button id="btn-edit">Edit text</button>
-        <button id="btn-annotate-new">Mark up</button>
-        <button id="btn-save" disabled>Save</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="gallery-view">
-    <div id="gallery-header">
-      <h1>Photos</h1>
-      <div id="gallery-header-actions">
-        <button id="select-btn">Select</button>
-        <button id="reorder-btn" title="Drag photos to rearrange">Reorder</button>
-        <button id="pdf-all-btn" disabled title="PDF report of all photos">Create Report</button>
-        <button id="attach-doc-btn" title="Attach a PDF (e.g. weather report, measurement report) — it gets appended to this folder's photo report">Attach PDF</button>
-        <button id="backup-btn" disabled title="Save this folder's photos/videos to your phone's Photo library">Backup to Phone</button>
-        <button id="drive-sync-btn" disabled title="Sync this project's photos to Google Drive">Sync to Drive</button>
-        <button id="drive-pull-btn" title="Pull a project's photos down from Google Drive">Pull from Drive</button>
-        <button id="drive-link-btn" title="Get a shareable link to this project's synced photos">Send Link</button>
-        <div class="export-btn-wrap">
-          <button id="export-btn" disabled>Export / Zip</button>
-          <div id="export-quality-menu">
-            <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
-            <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
-          </div>
-        </div>
-        <button id="account-btn" title="Account & subscription">Account</button>
-      </div>
-    </div>
-    <div id="gallery-search-row" class="pdf-field-row">
-      <input id="gallery-search" type="text" placeholder="Search photo names…" autocapitalize="words">
-      <button id="gallery-search-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-    <div id="bulk-bar">
-      <div id="bulk-count">0 selected</div>
-      <div id="bulk-bar-actions">
-        <button id="select-all-btn">Select all</button>
-        <button id="bulk-rename" disabled title="Rename the selected photo (select exactly 1)">Rename</button>
-        <button id="bulk-markup" disabled title="Mark up the selected photo (select exactly 1)">Mark up</button>
-        <button id="bulk-crop" disabled title="Crop, zoom, or resize the selected photo (select exactly 1)">Crop</button>
-        <button id="bulk-remove-markup" disabled title="Restore the selected photo's original, pre-edit version (select exactly 1)">Restore original</button>
-        <button id="bulk-categorize" disabled title="Assign a report category to the selected photos">Categorize</button>
-        <button id="bulk-pdf" disabled title="PDF report of selected photos">Create PDF</button>
-        <button id="bulk-share" disabled title="Send the selected photos/videos (e.g. by text)">Send</button>
-        <button id="bulk-delete" disabled>Delete</button>
-      </div>
-    </div>
-    <div id="grid"></div>
-    <div id="empty-state">No photos yet. Take some on the Camera tab.</div>
-    <input type="file" id="doc-picker" accept="application/pdf" multiple style="display:none">
-  </div>
-
-  <div id="tabbar">
-    <button id="create-project-pill" title="Create new project">
-      <span class="pill-label">New Project</span>
-      <span class="pill-name">+ Create</span>
-    </button>
-    <button id="project-banner" class="hidden" title="Switch project">
-      <span id="project-banner-label">Current Project</span>
-      <span id="project-banner-name">Project</span>
-    </button>
-    <button id="tab-camera" class="active"><span class="tab-icon">📷</span>Camera</button>
-    <button id="tab-gallery"><span class="tab-icon">🖼️</span>Gallery</button>
-  </div>
-</div>
-
-<div id="auth-view">
-  <div id="auth-card">
-    <h1 id="auth-title">Name That Photo</h1>
-    <p id="auth-subtitle">Sign in to continue</p>
-    <div id="auth-error" class="hidden"></div>
-    <input id="auth-email" type="email" placeholder="Email" autocapitalize="off" autocomplete="email">
-    <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password">
-    <button id="auth-submit">Sign In</button>
-    <button id="auth-toggle-mode">Need an account? Sign up</button>
-    <button id="auth-forgot">Forgot password?</button>
-  </div>
-</div>
-
-<div id="paywall-view" class="hidden">
-  <div id="paywall-card">
-    <h1 id="paywall-title">Start your free trial</h1>
-    <p id="paywall-subtitle">2 days free, then $17.99/month. Cancel anytime. A card is required to start the trial.</p>
-    <div id="paywall-error" class="hidden"></div>
-    <button id="paywall-start">Start 2-Day Free Trial</button>
-    <button id="paywall-refresh">I already paid — refresh status</button>
-    <button id="paywall-signout">Sign out</button>
-  </div>
-</div>
-
-<div id="account-view" class="hidden">
-  <div id="account-card">
-    <h1 id="account-title">Account</h1>
-    <p id="account-status-text">Loading…</p>
-    <div id="account-error" class="hidden"></div>
-    <button id="account-manage">Manage Subscription</button>
-    <div id="drive-status-row">
-      <span id="drive-status-text">Google Drive: Not connected</span>
-      <button id="drive-connect-btn">Connect</button>
-      <button id="drive-disconnect-btn" class="hidden">Disconnect</button>
-    </div>
-    <button id="account-signout-btn">Sign out</button>
-    <button id="account-close">Close</button>
-  </div>
-</div>
-
-<div id="admin-view" class="hidden">
-  <div id="admin-card">
-    <h1 id="admin-title">Beta Access</h1>
-    <p id="admin-subtitle">Grant or remove free access for a specific account, bypassing the subscription.</p>
-    <div id="admin-status" class="hidden"></div>
-    <input id="admin-email" type="email" placeholder="User's email" autocapitalize="off" autocomplete="off">
-    <div id="admin-toggle-row">
-      <span>Beta access</span>
-      <input id="admin-beta-toggle" type="checkbox">
-    </div>
-    <button id="admin-save">Save</button>
-    <button id="admin-close">Close</button>
-  </div>
-</div>
-
-<div id="rename-modal">
-  <div id="rename-card">
-    <h3>Rename photo</h3>
-    <div class="pdf-field-row">
-      <input id="rename-input" type="text" autocapitalize="words">
-      <button id="rename-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-    <div id="rename-actions">
-      <button id="rename-cancel">Cancel</button>
-      <button id="rename-save">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="recat-modal">
-  <div id="recat-card">
-    <h3>Categorize photo</h3>
-    <div id="recat-cat-row">
-      <button class="recat-cat-btn" data-cat="exterior">Exterior</button>
-      <button class="recat-cat-btn" data-cat="roof">Roof</button>
-      <button class="recat-cat-btn" data-cat="interior">Interior</button>
-      <button class="recat-cat-btn" data-cat="">Other</button>
-    </div>
-    <div id="recat-subloc-dir" class="hidden">
-      <button class="recat-dir-btn" data-dir="Front">Front Elevation</button>
-      <button class="recat-dir-btn" data-dir="Right">Right Elevation</button>
-      <button class="recat-dir-btn" data-dir="Rear">Rear Elevation</button>
-      <button class="recat-dir-btn" data-dir="Left">Left Elevation</button>
-    </div>
-    <div id="recat-room-row" class="hidden">
-      <select id="recat-room-select">
-        <option value="">Select room…</option>
-        <option value="Basement">Basement</option>
-        <option value="Bedroom Closet">Bedroom Closet</option>
-        <option value="Breakfast Area">Breakfast Area</option>
-        <option value="Den">Den</option>
-        <option value="Dining Room">Dining Room</option>
-        <option value="Entertainment Room">Entertainment Room</option>
-        <option value="Guest Bathroom">Guest Bathroom</option>
-        <option value="Guest Bedroom">Guest Bedroom</option>
-        <option value="Gym">Gym</option>
-        <option value="Hall Bathroom">Hall Bathroom</option>
-        <option value="Hallway">Hallway</option>
-        <option value="Keeping Room">Keeping Room</option>
-        <option value="Kitchen">Kitchen</option>
-        <option value="Linen Closet">Linen Closet</option>
-        <option value="Living Room">Living Room</option>
-        <option value="Office">Office</option>
-        <option value="Pantry">Pantry</option>
-        <option value="Primary Bathroom">Primary Bathroom</option>
-        <option value="Primary Bedroom">Primary Bedroom</option>
-        <option value="Sitting Area">Sitting Area</option>
-      </select>
-    </div>
-    <div id="recat-actions">
-      <button id="recat-cancel">Cancel</button>
-      <button id="recat-save">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="live-setup-modal">
-  <div id="live-setup-card">
-    <h3>Live View room</h3>
-    <p id="live-setup-help">This device gets its own room automatically the first time you go live,
-      so your stream never crosses with another inspector's. You can generate a fresh one below,
-      or paste a different room link manually if needed.</p>
-    <input id="live-room-input" type="text" placeholder="https://yoursubdomain.daily.co/yourroom"
-      autocapitalize="none" autocorrect="off" spellcheck="false">
-    <div id="live-setup-actions">
-      <button id="live-setup-generate">Generate new</button>
-      <button id="live-setup-cancel">Cancel</button>
-      <button id="live-setup-save">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="watch-live-modal">
-  <div id="watch-live-card">
-    <h3>Watch a live inspection</h3>
-    <p id="watch-live-help">No active inspection was found on your account yet. If the field inspector already
-      tapped "Go Live," try again in a moment — or paste their room link here as a fallback.</p>
-    <input id="watch-live-input" type="text" placeholder="https://yoursubdomain.daily.co/theirroom"
-      autocapitalize="none" autocorrect="off" spellcheck="false">
-    <div id="watch-live-actions">
-      <button id="watch-live-cancel">Cancel</button>
-      <button id="watch-live-join">Join</button>
-    </div>
-  </div>
-</div>
-
-<div id="drive-pull-modal">
-  <div id="drive-pull-card">
-    <h3>Pull Project from Drive</h3>
-    <div id="drive-pull-status">Loading projects…</div>
-    <div id="drive-pull-list"></div>
-    <div id="drive-pull-actions">
-      <button id="drive-pull-close">Close</button>
-    </div>
-  </div>
-</div>
-
-<div id="folders-modal">
-  <div id="folders-card">
-    <h3>Projects</h3>
-    <div id="folders-search-row" class="pdf-field-row">
-      <input id="folders-search" type="text" placeholder="Search projects…" autocapitalize="words" autocomplete="off" autocorrect="off" spellcheck="false" name="folders-search-noautofill">
-      <button id="folders-search-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">Create New Project</div>
-    <div class="pdf-field-row">
-      <input id="new-folder-input" type="text" placeholder="New Project Name" autocapitalize="words" autocomplete="off" autocorrect="off" spellcheck="false" name="new-project-noautofill">
-      <button id="new-folder-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div id="folders-list"></div>
-
-    <div id="folders-actions">
-      <button id="folders-close">Close</button>
-      <button id="new-folder-add">Add &amp; Switch</button>
-    </div>
-  </div>
-</div>
-
-<div id="pdf-modal">
-  <div id="pdf-card">
-    <h3>Photo Report Options</h3>
-
-    <div class="pdf-field-row">
-      <select id="pdf-scan-source">
-        <option value="">📄 Scan a document to autofill…</option>
-        <option value="__upload__">Upload a new PDF…</option>
-      </select>
-    </div>
-    <div id="pdf-scan-status"></div>
-    <input type="file" id="pdf-scan-doc-picker" accept="application/pdf" style="display:none">
-
-    <div class="pdf-label">Report title</div>
-    <div class="pdf-field-row">
-      <input id="pdf-title-input" type="text" value="Inspection Photo Report" autocapitalize="words">
-      <button id="pdf-title-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <form id="pdf-info-form" autocomplete="on">
-      <div class="pdf-label">Policy holder name</div>
-      <div class="pdf-field-row">
-        <input id="pdf-policyholder-input" type="text" placeholder="Optional" autocapitalize="words" autocomplete="name" name="name">
-        <button id="pdf-policyholder-mic" class="mic-btn" title="Speak">🎤</button>
-      </div>
-
-      <div class="pdf-label">Property address</div>
-      <div class="pdf-field-row">
-        <input id="pdf-address-input" type="text" placeholder="Street address" autocapitalize="words" autocomplete="street-address" name="street-address">
-        <button id="pdf-address-mic" class="mic-btn" title="Speak">🎤</button>
-      </div>
-      <div id="pdf-csz-row">
-        <div class="pdf-city-group">
-          <input id="pdf-city-input" type="text" placeholder="City" autocapitalize="words" autocomplete="address-level2" name="address-level2">
-          <button id="pdf-city-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
-        </div>
-        <div class="pdf-state-group">
-          <input id="pdf-state-input" type="text" placeholder="ST" autocapitalize="characters" autocomplete="address-level1" name="address-level1" maxlength="2">
-          <button id="pdf-state-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
-        </div>
-        <div class="pdf-zip-group">
-          <input id="pdf-zip-input" type="text" placeholder="ZIP" inputmode="numeric" autocomplete="postal-code" name="postal-code" maxlength="10">
-          <button id="pdf-zip-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
+        <div class="footer-col">
+          <h5>Support</h5>
+          <a href="mailto:namethatphoto@gmail.com">Contact</a>
         </div>
       </div>
-
-      <div class="pdf-label">Claim number</div>
-      <div class="pdf-field-row">
-        <input id="pdf-claim-input" type="text" placeholder="Optional" autocapitalize="characters">
-        <button id="pdf-claim-mic" class="mic-btn" title="Speak">🎤</button>
-      </div>
-
-      <div class="pdf-label">Policy number</div>
-      <div class="pdf-field-row">
-        <input id="pdf-policy-number-input" type="text" placeholder="Optional" autocapitalize="characters">
-        <button id="pdf-policy-number-mic" class="mic-btn" title="Speak">🎤</button>
-      </div>
-
-      <div class="pdf-label">Property owner phone</div>
-      <div class="pdf-field-row">
-        <input id="pdf-owner-phone-input" type="tel" placeholder="Optional" autocomplete="tel" name="tel">
-        <button id="pdf-owner-phone-mic" class="mic-btn" title="Speak">🎤</button>
-      </div>
-    </form>
-
-    <div class="pdf-label">Damage narrative (optional)</div>
-    <div class="pdf-field-row">
-      <textarea id="pdf-narrative-input" placeholder="Short summary of conditions/damages observed during the inspection…" rows="4"></textarea>
-      <button id="pdf-narrative-mic" class="mic-btn" title="Speak">🎤</button>
     </div>
-
-    <div class="pdf-label">Photos per page</div>
-    <div id="pdf-per-page-options">
-      <button class="pp-opt active" data-n="1">1</button>
-      <button class="pp-opt" data-n="2">2</button>
-      <button class="pp-opt" data-n="4">4</button>
-      <button class="pp-opt" data-n="6">6</button>
-    </div>
-
-    <div id="pdf-divider"></div>
-    <div id="pdf-section-label">Company &amp; inspector — saved for next time</div>
-
-    <div class="pdf-label">Company name</div>
-    <div class="pdf-field-row">
-      <input id="pdf-company-input" type="text" placeholder="Optional" autocapitalize="words">
-      <button id="pdf-company-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">Company address</div>
-    <div class="pdf-field-row">
-      <input id="pdf-company-address-input" type="text" placeholder="Street address" autocapitalize="words">
-      <button id="pdf-company-address-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-    <div id="pdf-company-csz-row" class="pdf-csz-row-shared">
-      <div class="pdf-city-group">
-        <input id="pdf-company-city-input" type="text" placeholder="City" autocapitalize="words">
-        <button id="pdf-company-city-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
-      </div>
-      <div class="pdf-state-group">
-        <input id="pdf-company-state-input" type="text" placeholder="ST" autocapitalize="characters" maxlength="2">
-        <button id="pdf-company-state-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
-      </div>
-      <div class="pdf-zip-group">
-        <input id="pdf-company-zip-input" type="text" placeholder="ZIP" inputmode="numeric" maxlength="10">
-        <button id="pdf-company-zip-mic" class="mic-btn mic-btn-sm" title="Speak">🎤</button>
-      </div>
-    </div>
-
-    <div class="pdf-label">Company contact (phone / email)</div>
-    <div class="pdf-field-row">
-      <input id="pdf-contact-input" type="text" placeholder="Optional">
-      <button id="pdf-contact-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">Company logo</div>
-    <div class="pdf-field-row">
-      <button id="pdf-logo-pick" type="button">Choose image</button>
-      <button id="pdf-logo-clear" type="button" title="Remove logo">Remove</button>
-    </div>
-    <input id="pdf-logo-file" type="file" accept="image/*,.jpg,.jpeg,.png,.bmp,.gif,.webp" class="hidden">
-    <div id="pdf-logo-preview" class="hidden"><img id="pdf-logo-preview-img" alt="logo"></div>
-
-    <div class="pdf-label">Inspector name</div>
-    <div class="pdf-field-row">
-      <input id="pdf-inspector-input" type="text" placeholder="Optional" autocapitalize="words">
-      <button id="pdf-inspector-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">License #</div>
-    <div class="pdf-field-row">
-      <input id="pdf-license-input" type="text" placeholder="Optional" autocapitalize="characters">
-      <button id="pdf-license-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">Inspector phone</div>
-    <div class="pdf-field-row">
-      <input id="pdf-inspector-phone-input" type="tel" placeholder="Optional" autocomplete="tel">
-      <button id="pdf-inspector-phone-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div class="pdf-label">Inspector email</div>
-    <div class="pdf-field-row">
-      <input id="pdf-inspector-email-input" type="email" placeholder="Optional" autocomplete="email" autocapitalize="none">
-      <button id="pdf-inspector-email-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
-
-    <div id="pdf-divider"></div>
-    <div class="pdf-label">Cover photo (optional)</div>
-    <div id="pdf-coverphoto-strip">
-      <button type="button" class="pdf-coverphoto-thumb pdf-coverphoto-none selected" data-id="">None</button>
-    </div>
-
-    <div id="pdf-modal-actions">
-      <button id="pdf-cancel">Cancel</button>
-      <!-- Only shown when this modal was opened via "Add Customer Info Now" at project
-           creation, before any photos exist — Generate is a no-op there, so give a direct
-           way to save what's been entered and head to the camera instead. -->
-      <button id="pdf-save-camera" class="hidden">💾 Save &amp; Start Camera</button>
-      <button id="pdf-generate">Preview</button>
-    </div>
-  </div>
-</div>
-
-<!-- PDF preview overlay — shown after "Preview" builds the report, before it's saved to the
-     gallery or handed to the share sheet, so a mis-entered field or bad photo order can be
-     caught and fixed instead of discovered after the report's already gone out. -->
-<div id="pdf-preview-modal">
-  <div id="pdf-preview-topbar">
-    <button id="pdf-preview-back">Back to Edit</button>
-    <div id="pdf-preview-title">Report Preview</div>
-    <button id="pdf-preview-send">Save &amp; Send</button>
-  </div>
-  <!-- Populated with one <canvas> per page by app.js (via pdf.js), not a native PDF viewer —
-       iOS Safari's built-in iframe PDF viewer ignores the #view=Fit open-parameter for
-       blob: URLs, so the only reliable way to guarantee each full page fits on screen is to
-       render and scale it ourselves. -->
-  <div id="pdf-preview-frame"></div>
-</div>
-
-<!-- Desktop equivalent of the mobile "Start Camera / Add Customer Info Now" prompt shown
-     after a project is created or switched to. Desktop has no camera feed to offer, so this
-     only ever offers the PDF/customer-info option — as a small modal instead of the full-
-     screen takeover used on mobile, since the dashboard behind it is already useful. -->
-<div id="dsk-project-prompt-modal">
-  <div id="dsk-project-prompt-card">
-    <h3>Project ready: <span id="dsk-project-prompt-name">Project</span></h3>
-    <p id="dsk-project-prompt-sub">Customer/claim info is optional here — add it now or later from the PDF report screen.</p>
-    <div id="dsk-project-prompt-actions">
-      <button id="dsk-project-prompt-skip">Skip</button>
-      <button id="dsk-project-prompt-pdf">📄 Add Customer Info Now</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"><div id="toast-text"></div></div>
-
-<div id="detail-modal">
-  <div id="detail-topbar">
-    <button id="detail-close">Close</button>
-    <div id="detail-name"></div>
-    <div style="width:44px;"></div>
-  </div>
-  <div id="detail-img-wrap"><img id="detail-img" alt="photo"><video id="detail-video" class="hidden" controls playsinline></video>
-    <div id="detail-pdf-tile" class="hidden">
-      <div id="detail-pdf-icon">📄</div>
-      <button id="detail-pdf-open">Open PDF</button>
-    </div>
-  </div>
-  <div id="detail-actions">
-    <button id="detail-annotate">Mark up</button>
-    <button id="detail-crop">Crop</button>
-    <button id="detail-remove-markup" class="hidden">Restore original</button>
-    <button id="detail-share">Send</button>
-    <button id="detail-rename">Rename</button>
-    <button id="detail-categorize">Categorize</button>
-    <button id="detail-delete">Delete</button>
-  </div>
-</div>
-
-<div id="annotate-overlay">
-  <div id="annotate-topbar">
-    <button id="annotate-cancel">Cancel</button>
-    <div style="color:#fff; font-size:13px; font-weight:600;">Mark up photo</div>
-    <button id="annotate-save">Done</button>
-  </div>
-  <div id="annotate-canvas-wrap"><canvas id="annotate-canvas"></canvas></div>
-  <div id="annotate-toolbar">
-    <div id="annotate-tools">
-      <button data-tool="pen" title="Freehand">✏️</button>
-      <button data-tool="arrow" title="Arrow">↗️</button>
-      <button data-tool="rect" title="Rectangle">▭</button>
-      <button data-tool="circle" title="Circle">◯</button>
-      <button data-tool="text" title="Text">🔤</button>
-    </div>
-    <div id="annotate-bottom-row">
-      <div id="annotate-colors">
-        <button class="color-swatch" data-color="#ff3b30" style="background:#ff3b30;"></button>
-        <button class="color-swatch" data-color="#ffcc00" style="background:#ffcc00;"></button>
-        <button class="color-swatch" data-color="#34c759" style="background:#34c759;"></button>
-        <button class="color-swatch" data-color="#ffffff" style="background:#ffffff;"></button>
-      </div>
-      <div id="annotate-undo-clear">
-        <button id="annotate-undo">Undo</button>
-        <button id="annotate-clear">Clear</button>
+    <div class="footer-bottom">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img src="images/leighcore-logo.jpg" alt="LeighCore Technologies LLC logo" style="height:24px; width:auto; border-radius:4px;">
+        <span>© 2026 LeighCore Technologies LLC. All rights reserved.</span>
       </div>
     </div>
   </div>
-</div>
+</footer>
 
-<div id="crop-overlay">
-  <div id="crop-topbar">
-    <button id="crop-cancel">Cancel</button>
-    <div style="color:#fff; font-size:13px; font-weight:600;">Crop / zoom photo</div>
-    <button id="crop-save">Done</button>
-  </div>
-  <div id="crop-canvas-wrap">
-    <div id="crop-frame">
-      <img id="crop-img" alt="photo to crop" draggable="false">
-    </div>
-  </div>
-  <div id="crop-toolbar">
-    <div id="crop-aspect-row">
-      <button data-ratio="orig" class="active">Original</button>
-      <button data-ratio="1:1">Square</button>
-      <button data-ratio="4:3">4:3</button>
-      <button data-ratio="16:9">16:9</button>
-      <button data-ratio="9:16">9:16</button>
-    </div>
-    <div id="crop-reset-row">
-      <button id="crop-reset">Reset zoom</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<!-- pdf-lib: merges attached PDFs (weather reports, measurement reports) into the
-     generated photo report byte-for-byte, instead of flattening them to images. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<!-- pdf.js: renders the report preview to canvas ourselves, page by page — iOS Safari's
-     built-in iframe PDF viewer ignores zoom/fit open-parameters for blob: URLs, so this is
-     the only reliable way to guarantee the whole page is visible on screen. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-  if (window.pdfjsLib) {
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-</script>
-<script src="https://unpkg.com/@daily-co/daily-js/dist/daily.js"></script>
-<script type="module">
-  // Firebase Auth + Firestore — loaded via CDN ESM (no bundler/npm needed for this static app).
-  // Analytics intentionally omitted: not needed for auth/subscription gating.
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-    createUserWithEmailAndPassword, signOut, sendPasswordResetEmail
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import {
-    getFirestore, doc, getDoc, setDoc, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBbN5GQiUxx6EmPOBlqw-rpVrXq9_UI8v0",
-    authDomain: "name-that-photo.firebaseapp.com",
-    projectId: "name-that-photo",
-    storageBucket: "name-that-photo.firebasestorage.app",
-    messagingSenderId: "412407842885",
-    appId: "1:412407842885:web:7fadac53aa97bbe8fffb2c"
-  };
-
-  const firebaseApp = initializeApp(firebaseConfig);
-  const auth = getAuth(firebaseApp);
-  const db = getFirestore(firebaseApp);
-  // Exposed on window so plain-script app.js (loaded next, non-module) can use them.
-  window.firebaseAuth = auth;
-  window.firebaseDb = db;
-
-  // Thin wrapper functions — app.js (a classic, non-module script) can't use `import`,
-  // so every Firebase SDK call it needs is funneled through these window-level functions.
-  window.fbSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
-
-  window.fbSignUp = async (email, password) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // New users start with status "pending" — no access until Stripe Checkout completes
-    // and the webhook (task #63) flips this to "trial"/"active", or an admin sets betaAccess.
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      email,
-      status: 'pending',
-      betaAccess: false,
-      createdAt: serverTimestamp()
-    });
-    return cred;
-  };
-
-  window.fbSignOut = () => signOut(auth);
-  window.fbResetPassword = (email) => sendPasswordResetEmail(auth, email);
-
-  window.fbGetUserDoc = async (uid) => {
-    const snap = await getDoc(doc(db, 'users', uid));
-    return snap.exists() ? snap.data() : null;
-  };
-
-  // Stores this account's current Live View room on the user's own Firestore doc
-  // (rather than only in this device's localStorage) so that a second device signed
-  // into the SAME account — e.g. the desk computer — can find and join the field
-  // inspector's room automatically, with no link to copy/paste between devices.
-  window.fbSetLiveRoom = (uid, url) =>
-    setDoc(doc(db, 'users', uid), { liveRoomUrl: url }, { merge: true });
-
-  // Used by the hidden admin screen (task #65) to prove identity to admin-set-beta.js —
-  // the function independently re-verifies this token against Google rather than trusting
-  // the client, so this alone never grants access.
-  window.fbGetIdToken = () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null));
-
-  onA
+</body>
+</html>
