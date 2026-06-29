@@ -5423,4 +5423,546 @@
     const inspectorName = pdfEls.inspectorInput.value.trim();
     const licenseNumber = pdfEls.licenseInput.value.trim();
     const inspectorPhone = pdfEls.inspectorPhoneInput.value.trim();
-    const inspectorEmail = pdfEls.inspectorEm
+    const inspectorEmail = pdfEls.inspectorEmailInput.value.trim();
+    const companyName = pdfEls.companyInput.value.trim();
+    const companyAddress = pdfEls.companyAddressInput.value.trim();
+    const companyCity = pdfEls.companyCityInput.value.trim();
+    const companyState = pdfEls.companyStateInput.value.trim();
+    const companyZip = pdfEls.companyZipInput.value.trim();
+    const companyContact = pdfEls.contactInput.value.trim();
+    const opts = {
+      title: pdfEls.titleInput.value.trim() || 'Photo Report',
+      policyHolder: pdfEls.policyInput.value.trim(),
+      claimNumber: pdfEls.claimInput.value.trim(),
+      policyNumber: pdfEls.policyNumberInput.value.trim(),
+      propertyAddress: pdfEls.addressInput.value.trim(),
+      propertyCity: pdfEls.cityInput.value.trim(),
+      propertyState: pdfEls.stateInput.value.trim(),
+      propertyZip: pdfEls.zipInput.value.trim(),
+      ownerPhone: pdfEls.ownerPhoneInput.value.trim(),
+      narrative: pdfEls.narrativeInput.value.trim(),
+      perPage: pdfPerPage,
+      inspectorName, licenseNumber, inspectorPhone, inspectorEmail,
+      companyName, companyAddress, companyCity, companyState, companyZip, companyContact,
+      logoDataUrl: pdfLogoDataUrl,
+      coverPhotoId: pdfCoverPhotoId,
+      attachments: pdfPendingAttachments || [],
+    };
+    // These cover-page fields are sticky across reports — save whatever's in the
+    // fields now so the next report opens pre-filled.
+    savePdfPrefs(Object.assign(loadPdfPrefs(), {
+      inspectorName, licenseNumber, inspectorPhone, inspectorEmail,
+      companyName, companyAddress, companyCity, companyState, companyZip, companyContact,
+    }));
+    pdfEls.generate.disabled = true;
+    pdfEls.generate.textContent = '…';
+    try {
+      const reportBlob = await buildPdfReport(records, opts);
+      // Hold the built report and show it in the preview overlay instead of saving/sharing
+      // immediately — catches a wrong field or bad photo order before the report goes out,
+      // rather than after. Save & Send (below) reuses this exact blob, so confirming the
+      // preview doesn't regenerate or risk drifting from what was actually reviewed.
+      pdfPreviewBlob = reportBlob;
+      pdfPreviewOpts = opts;
+      // Show the overlay first, then render — the container must actually be visible (not
+      // display:none) before getBoundingClientRect() inside renderPdfPreview gives a real size.
+      pdfEls.previewModal.classList.add('active');
+      await renderPdfPreview(reportBlob);
+    } catch (err) {
+      console.error(err);
+      toast('PDF report failed — try again');
+    } finally {
+      pdfEls.generate.disabled = false;
+      pdfEls.generate.textContent = 'Preview';
+    }
+  });
+
+  // "Back to Edit" — just closes the preview and returns to the still-open options form;
+  // nothing has been saved or sent yet, so there's nothing to undo.
+  pdfEls.previewBack.addEventListener('click', () => {
+    pdfEls.previewModal.classList.remove('active');
+    clearPdfPreview();
+  });
+
+  // "Save & Send" — confirms the previewed report is correct, then runs the same
+  // save-to-gallery + share-sheet flow the old Generate button used to run immediately.
+  pdfEls.previewSend.addEventListener('click', async () => {
+    if (!pdfPreviewBlob || !pdfPreviewOpts) return;
+    const blob = pdfPreviewBlob;
+    const opts = pdfPreviewOpts;
+    pdfEls.previewSend.disabled = true;
+    pdfEls.previewSend.textContent = '…';
+    try {
+      pdfEls.previewModal.classList.remove('active');
+      clearPdfPreview();
+      closePdfOptions();
+      await saveAndSendPdf(blob, opts);
+    } catch (err) {
+      console.error(err);
+      toast('PDF report failed — try again');
+    } finally {
+      pdfEls.previewSend.disabled = false;
+      pdfEls.previewSend.textContent = 'Save & Send';
+    }
+  });
+
+  els.pdfAllBtn.addEventListener('click', async () => {
+    const records = await getFolderPhotos(currentFolderId);
+    openPdfOptions(records);
+  });
+
+  els.bulkPdf.addEventListener('click', async () => {
+    const allRecords = await dbGetAll();
+    const byId = new Map(allRecords.map((r) => [r.id, r]));
+    const records = galleryIds.filter((id) => selectedIds.has(id)).map((id) => byId.get(id)).filter(Boolean);
+    openPdfOptions(records);
+  });
+
+  // Sends exactly the selected photos/videos via the share sheet — no zip, no "export
+  // all" — so picking one recording and tapping Send only sends that one recording.
+  els.bulkShare.addEventListener('click', async () => {
+    const allRecords = await dbGetAll();
+    const byId = new Map(allRecords.map((r) => [r.id, r]));
+    const records = galleryIds.filter((id) => selectedIds.has(id)).map((id) => byId.get(id)).filter(Boolean);
+    if (!records.length) return;
+    const usedNames = new Map();
+    const files = records.map((rec) => {
+      const isVideo = rec.kind === 'video';
+      const isPdf = rec.kind === 'pdf';
+      const mimeType = rec.blob.type || (isVideo ? 'video/mp4' : isPdf ? 'application/pdf' : 'image/jpeg');
+      const ext = isVideo ? (mimeType.includes('mp4') ? 'mp4' : 'webm') : isPdf ? 'pdf' : 'jpg';
+      let base = sanitizeFilename(rec.name);
+      const count = usedNames.get(base) || 0;
+      usedNames.set(base, count + 1);
+      const filename = count === 0 ? `${base}.${ext}` : `${base}_${count + 1}.${ext}`;
+      return new File([rec.blob], filename, { type: mimeType });
+    });
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: records.length === 1 ? records[0].name : `${records.length} items` });
+      } catch (e) { /* user cancelled — nothing to do */ }
+    } else {
+      toast('Sharing files isn’t supported in this browser');
+    }
+  });
+
+  /* ---------------- Exit button ---------------- */
+  const exitBtn = document.getElementById('exit-app');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', () => {
+      if (confirm('Exit to the Name That Photo home page?')) {
+        stopCamera();
+        window.location.href = '/';
+      }
+    });
+  }
+
+  /* ---------------- Service worker ---------------- */
+  // updateViaCache:'none' tells the browser to always fetch sw.js itself straight from the
+  // network (never from HTTP cache) when checking for updates. Without this, a browser can
+  // keep serving a stale cached copy of sw.js for a long time — which is exactly what
+  // happened in Edge: it sat on the very first deployed cache version (v1) through many
+  // later deploys because it never re-fetched sw.js to notice the CACHE constant had changed.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+      navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update().catch(() => {}));
+    });
+  }
+
+  /* ---------------- Auth (sign in / sign up) ----------------
+     Firebase Auth/Firestore SDK calls live in a <script type="module"> in index.html
+     (this file is a classic script and can't use `import`); that script funnels every
+     call through window.fb*() functions and fires a "fb-auth-changed" window event
+     whenever sign-in state changes. currentUserDoc is the Firestore users/{uid} record —
+     it's not used for access gating yet (task #64, blocked on Stripe/webhook setup); for
+     now, any successfully authenticated user reaches the app. */
+  let authMode = 'signin';
+  let currentFirebaseUser = null;
+  let currentUserDoc = null;
+  let appStarted = false;
+
+  function showAuthError(msg) {
+    els.authError.textContent = msg;
+    els.authError.classList.remove('hidden');
+  }
+  function clearAuthError() {
+    els.authError.classList.add('hidden');
+    els.authError.textContent = '';
+  }
+  function renderAuthMode() {
+    if (authMode === 'signin') {
+      els.authSubtitle.textContent = 'Sign in to continue';
+      els.authSubmit.textContent = 'Sign In';
+      els.authToggleMode.textContent = 'Need an account? Sign up';
+    } else {
+      els.authSubtitle.textContent = 'Create your account';
+      els.authSubmit.textContent = 'Sign Up';
+      els.authToggleMode.textContent = 'Already have an account? Sign in';
+    }
+  }
+  function friendlyAuthError(err) {
+    switch (err && err.code) {
+      case 'auth/invalid-email': return 'Enter a valid email address.';
+      case 'auth/missing-password':
+      case 'auth/weak-password': return 'Password must be at least 6 characters.';
+      case 'auth/email-already-in-use': return 'An account already exists for that email — sign in instead.';
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password': return 'Incorrect email or password.';
+      case 'auth/user-not-found': return 'No account found for that email.';
+      case 'auth/too-many-requests': return 'Too many attempts — wait a moment and try again.';
+      default: return (err && err.message) || 'Something went wrong. Try again.';
+    }
+  }
+  // Desktop/laptop sessions are review-only: an inspector takes photos on their phone
+  // and only opens the desktop app later to name/label them and assemble reports — there's
+  // no reason to request the webcam on launch there. No touch points + no mobile/tablet
+  // user-agent string is treated as "desktop." The Camera tab itself still works if tapped
+  // manually (e.g. a webcam-equipped laptop); this only controls what loads on startup.
+  function isDesktopDevice() {
+    const ua = navigator.userAgent;
+    if (/Mobi|Android|iPhone|iPod|iPad/i.test(ua)) return false; // phones/tablets always get the camera
+    // A real Windows/Linux/ChromeOS PC is a desktop even if it has a touchscreen — only
+    // iPadOS Safari needs the touch-point check, since it reports a plain "Macintosh" UA
+    // identical to a real Mac's and is only distinguishable by maxTouchPoints > 1.
+    if (/Windows|Linux|CrOS|X11/i.test(ua)) return true;
+    return navigator.maxTouchPoints <= 1;
+  }
+
+  function startAppUI() {
+    if (appStarted) return;
+    appStarted = true;
+    if (isDesktopDevice()) {
+      // Backup-to-Phone only makes sense on an actual phone (it shares files into
+      // the iOS Photos app via the share sheet) — hide it on desktop sessions.
+      if (els.backupBtn) els.backupBtn.style.display = 'none';
+    }
+    showCamera();
+    refreshGallery();
+  }
+
+  if (els.authToggleMode) {
+    els.authToggleMode.addEventListener('click', () => {
+      authMode = authMode === 'signin' ? 'signup' : 'signin';
+      clearAuthError();
+      renderAuthMode();
+    });
+  }
+  if (els.authSubmit) {
+    els.authSubmit.addEventListener('click', async () => {
+      const email = els.authEmail.value.trim();
+      const password = els.authPassword.value;
+      if (!email || !password) { showAuthError('Enter both email and password.'); return; }
+      clearAuthError();
+      els.authSubmit.disabled = true;
+      const origText = els.authSubmit.textContent;
+      els.authSubmit.textContent = authMode === 'signin' ? 'Signing in…' : 'Creating account…';
+      try {
+        if (authMode === 'signin') {
+          await window.fbSignIn(email, password);
+        } else {
+          await window.fbSignUp(email, password);
+        }
+        // The "fb-auth-changed" listener below takes it from here once Firebase fires.
+      } catch (err) {
+        showAuthError(friendlyAuthError(err));
+      } finally {
+        els.authSubmit.disabled = false;
+        els.authSubmit.textContent = origText;
+      }
+    });
+  }
+  if (els.authPassword) {
+    els.authPassword.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') els.authSubmit.click();
+    });
+  }
+  if (els.authForgot) {
+    els.authForgot.addEventListener('click', async () => {
+      const email = els.authEmail.value.trim();
+      if (!email) { showAuthError('Enter your email above, then tap "Forgot password?" again.'); return; }
+      clearAuthError();
+      try {
+        await window.fbResetPassword(email);
+        toast(`Password reset email sent to ${email}`);
+      } catch (err) {
+        showAuthError(friendlyAuthError(err));
+      }
+    });
+  }
+  renderAuthMode();
+
+  /* ---------------- Paywall (Stripe Checkout) ----------------
+     Subscription state lives in Firestore users/{uid}.status, written ONLY by the Stripe
+     webhook (task #63) — never by this client — per the server-side-only enforcement
+     principle (client-side gating alone is bypassable via dev tools). betaAccess is a
+     separate manual override for power-user testers, toggled from the admin screen
+     (task #65), also server-written only. Until #63/#65 exist, every new signup stays on
+     this paywall until Stripe Checkout completes AND the webhook flips status — so right
+     now, completing test-mode checkout will NOT yet unlock the app; that's expected until
+     the webhook is built. */
+  const CHECKOUT_FUNCTION_URL = 'https://dapper-hummingbird-736d0d.netlify.app/.netlify/functions/create-checkout-session';
+
+  function hasAccess(userDoc) {
+    if (!userDoc) return false;
+    if (userDoc.betaAccess) return true;
+    return userDoc.status === 'trial' || userDoc.status === 'active';
+  }
+  function showAuthScreen() {
+    els.appRoot.classList.add('hidden');
+    els.paywallView.classList.add('hidden');
+    els.authView.classList.remove('hidden');
+  }
+  function showPaywallScreen() {
+    els.appRoot.classList.add('hidden');
+    els.authView.classList.add('hidden');
+    els.paywallView.classList.remove('hidden');
+  }
+  function showAppScreen() {
+    els.authView.classList.add('hidden');
+    els.paywallView.classList.add('hidden');
+    els.appRoot.classList.remove('hidden');
+    startAppUI();
+  }
+  function showPaywallError(msg) {
+    els.paywallError.textContent = msg;
+    els.paywallError.classList.remove('hidden');
+  }
+  function clearPaywallError() {
+    els.paywallError.classList.add('hidden');
+    els.paywallError.textContent = '';
+  }
+
+  if (els.paywallStart) {
+    els.paywallStart.addEventListener('click', async () => {
+      if (!currentFirebaseUser) return;
+      clearPaywallError();
+      els.paywallStart.disabled = true;
+      const origText = els.paywallStart.textContent;
+      els.paywallStart.textContent = 'Loading…';
+      try {
+        const res = await fetch(CHECKOUT_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: currentFirebaseUser.uid, email: currentFirebaseUser.email }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'Could not start checkout');
+        window.location.href = data.url; // hand off to Stripe Checkout
+      } catch (err) {
+        showPaywallError(err.message || 'Could not start checkout. Try again.');
+        els.paywallStart.disabled = false;
+        els.paywallStart.textContent = origText;
+      }
+    });
+  }
+  if (els.paywallRefresh) {
+    els.paywallRefresh.addEventListener('click', async () => {
+      if (!currentFirebaseUser) return;
+      clearPaywallError();
+      els.paywallRefresh.textContent = 'Checking…';
+      try {
+        currentUserDoc = await window.fbGetUserDoc(currentFirebaseUser.uid);
+        if (hasAccess(currentUserDoc)) {
+          showAppScreen();
+        } else {
+          showPaywallError('Still showing no active subscription. If you just paid, wait a moment and try again.');
+        }
+      } catch (err) {
+        showPaywallError('Could not check status. Try again.');
+      } finally {
+        els.paywallRefresh.textContent = 'I already paid — refresh status';
+      }
+    });
+  }
+  if (els.paywallSignout) {
+    els.paywallSignout.addEventListener('click', () => window.fbSignOut());
+  }
+
+  /* ---------------- Admin (hidden beta-access toggle, task #65) ----------------
+     Reached only by visiting ?admin=1 while signed in as one of CLIENT_ADMIN_EMAILS — this
+     list is just so the screen doesn't show up for regular users; it is NOT the security
+     boundary. The actual enforcement is server-side in admin-set-beta.js, which independently
+     re-verifies the caller's Firebase ID token against its own ADMIN_EMAILS allowlist on
+     Netlify, so this client-side list being visible in page source grants nothing on its own. */
+  const CLIENT_ADMIN_EMAILS = ['namethatphoto@gmail.com'];
+  const ADMIN_FUNCTION_URL = 'https://dapper-hummingbird-736d0d.netlify.app/.netlify/functions/admin-set-beta';
+
+  function showAdminStatus(msg, isError) {
+    els.adminStatus.textContent = msg;
+    els.adminStatus.classList.remove('hidden', 'error', 'success');
+    els.adminStatus.classList.add(isError ? 'error' : 'success');
+  }
+  function clearAdminStatus() {
+    els.adminStatus.classList.add('hidden');
+    els.adminStatus.textContent = '';
+  }
+  function showAdminScreen() {
+    clearAdminStatus();
+    els.adminEmail.value = '';
+    els.adminBetaToggle.checked = false;
+    els.adminView.classList.remove('hidden');
+  }
+  function hideAdminScreen() {
+    els.adminView.classList.add('hidden');
+  }
+
+  if (els.adminSave) {
+    els.adminSave.addEventListener('click', async () => {
+      const targetEmail = els.adminEmail.value.trim();
+      if (!targetEmail) { showAdminStatus('Enter a user email.', true); return; }
+      clearAdminStatus();
+      els.adminSave.disabled = true;
+      const origText = els.adminSave.textContent;
+      els.adminSave.textContent = 'Saving…';
+      try {
+        const idToken = await window.fbGetIdToken();
+        if (!idToken) throw new Error('Not signed in.');
+        const res = await fetch(ADMIN_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, targetEmail, betaAccess: els.adminBetaToggle.checked }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Could not save.');
+        showAdminStatus(`Beta access ${data.betaAccess ? 'granted' : 'removed'} for ${targetEmail}.`, false);
+      } catch (err) {
+        showAdminStatus(err.message || 'Could not save. Try again.', true);
+      } finally {
+        els.adminSave.disabled = false;
+        els.adminSave.textContent = origText;
+      }
+    });
+  }
+  if (els.adminClose) {
+    els.adminClose.addEventListener('click', hideAdminScreen);
+  }
+
+  /* ---------------- Account screen (Billing Portal, task #66) ----------------
+     Lets a subscriber cancel or update their card themselves instead of emailing support.
+     Does NOT send a Stripe customer ID from this client — create-portal-session.js looks up
+     the caller's own stripeCustomerId server-side from their verified uid, so this can't be
+     used to open someone else's billing portal by tampering with the request. */
+  const PORTAL_FUNCTION_URL = 'https://dapper-hummingbird-736d0d.netlify.app/.netlify/functions/create-portal-session';
+
+  function showAccountError(msg) {
+    els.accountError.textContent = msg;
+    els.accountError.classList.remove('hidden');
+  }
+  function clearAccountError() {
+    els.accountError.classList.add('hidden');
+    els.accountError.textContent = '';
+  }
+  function renderAccountStatus() {
+    if (!currentUserDoc) { els.accountStatusText.textContent = ''; return; }
+    if (currentUserDoc.betaAccess) {
+      els.accountStatusText.textContent = 'Beta access — no subscription required.';
+      els.accountManage.classList.add('hidden');
+    } else if (currentUserDoc.status === 'trial') {
+      els.accountStatusText.textContent = 'Free trial active.';
+      els.accountManage.classList.remove('hidden');
+    } else if (currentUserDoc.status === 'active') {
+      els.accountStatusText.textContent = 'Subscription active — $17.99/month.';
+      els.accountManage.classList.remove('hidden');
+    } else if (currentUserDoc.status === 'canceled') {
+      els.accountStatusText.textContent = 'Subscription canceled.';
+      els.accountManage.classList.add('hidden');
+    } else {
+      els.accountStatusText.textContent = currentUserDoc.status || 'Unknown status.';
+      els.accountManage.classList.remove('hidden');
+    }
+  }
+  function showAccountScreen() {
+    clearAccountError();
+    renderAccountStatus();
+    els.accountView.classList.remove('hidden');
+  }
+  function hideAccountScreen() {
+    els.accountView.classList.add('hidden');
+  }
+
+  if (els.accountBtn) {
+    els.accountBtn.addEventListener('click', showAccountScreen);
+  }
+  if (els.accountClose) {
+    els.accountClose.addEventListener('click', hideAccountScreen);
+  }
+  if (els.accountSignoutBtn) {
+    els.accountSignoutBtn.addEventListener('click', () => window.fbSignOut());
+  }
+  if (els.accountManage) {
+    els.accountManage.addEventListener('click', async () => {
+      clearAccountError();
+      els.accountManage.disabled = true;
+      const origText = els.accountManage.textContent;
+      els.accountManage.textContent = 'Loading…';
+      try {
+        const idToken = await window.fbGetIdToken();
+        if (!idToken) throw new Error('Not signed in.');
+        const res = await fetch(PORTAL_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'Could not open billing portal.');
+        window.location.href = data.url; // hand off to Stripe's hosted Billing Portal
+      } catch (err) {
+        showAccountError(err.message || 'Could not open billing portal. Try again.');
+        els.accountManage.disabled = false;
+        els.accountManage.textContent = origText;
+      }
+    });
+  }
+
+  // Returning from Stripe Checkout — surface a clear status message either way.
+  (function handleCheckoutReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    if (checkout === 'success') {
+      toast('Payment received — finishing setup…');
+    } else if (checkout === 'cancel') {
+      toast('Checkout canceled');
+    }
+    if (checkout) {
+      params.delete('checkout');
+      params.delete('session_id');
+      const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, '', clean);
+    }
+  })();
+
+  window.addEventListener('fb-auth-changed', async (e) => {
+    const user = e.detail.user;
+    currentFirebaseUser = user;
+    if (user) {
+      try {
+        currentUserDoc = await window.fbGetUserDoc(user.uid);
+      } catch (err) {
+        currentUserDoc = null; // Firestore read failed (e.g. rules not yet published) — don't block sign-in on it
+      }
+      els.authEmail.value = '';
+      els.authPassword.value = '';
+      if (hasAccess(currentUserDoc)) {
+        showAppScreen();
+      } else {
+        showPaywallScreen();
+      }
+      const wantsAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+      if (wantsAdmin && user.email && CLIENT_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        showAdminScreen();
+      }
+    } else {
+      currentUserDoc = null;
+      showAuthScreen();
+    }
+  });
+
+  /* ---------------- Init ---------------- */
+  (async function init() {
+    db = await openDB();
+    await bootstrapFolders();
+    // showCamera()/refreshGallery() are deferred to startAppUI(), triggered by the
+    // "fb-auth-changed" listener above once the user is signed in.
+  })();
+})();
