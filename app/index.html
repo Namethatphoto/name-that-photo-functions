@@ -111,7 +111,7 @@
     padding:8px 10px calc(8px + env(safe-area-inset-bottom)); flex:0 0 auto; }
   #tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
     background:#1c1c1e; border:1px solid #333; border-radius:12px; color:#aaa; padding:10px 0;
-    font-size:13px; font-weight:700; }
+    font-size:14px; font-weight:700; }
   #tabbar button .tab-icon { font-size:20px; line-height:1; }
   #tabbar button.active { color:#fff; background:#0a84ff; border-color:#0a84ff; }
 
@@ -519,14 +519,14 @@
   #naming-tag-row { display:flex; flex-direction:column; gap:6px; padding:0 16px 8px; }
   #naming-cat-row { display:flex; gap:6px; }
   #naming-cat-row button { flex:1; background:#1c1c1e; color:#bbb; border:1px solid #3a3a3c;
-    border-radius:8px; padding:7px 2px; font-size:11.5px; font-weight:600; }
+    border-radius:8px; padding:7px 2px; font-size:13px; font-weight:700; }
   #naming-cat-row button { background:#0a84ff; color:#fff; border-color:#0a84ff; }
-  #naming-cat-row button.active { background:#34c759; color:#000; border-color:#34c759; }
+  #naming-cat-row button.active { background:#30d158; color:#fff; border-color:#30d158; }
   #naming-subloc-dir { display:flex; gap:6px; }
   #naming-subloc-dir.hidden { display:none; }
   #naming-subloc-dir button { flex:1; background:#0a84ff; color:#fff; border:1px solid #0a84ff;
-    border-radius:8px; padding:7px 2px; font-size:10px; font-weight:600; }
-  #naming-subloc-dir button.active { background:#34c759; color:#000; border-color:#34c759; }
+    border-radius:8px; padding:7px 2px; font-size:12px; font-weight:700; }
+  #naming-subloc-dir button.active { background:#30d158; color:#fff; border-color:#30d158; }
   #naming-subloc-dir button.suggested:not(.active)::after { content:' •'; color:#5ac8fa; }
   /* Interior room picker — a fixed list (rather than free text) so room labels stay
      consistent across the whole report instead of however each inspector happened to
@@ -537,13 +537,13 @@
     border-radius:8px; padding:9px 10px; font-size:14px; font-weight:600; }
 
   #naming-controls { display:flex; gap:12px; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
-  #naming-controls button { flex:1; padding:14px 0; border-radius:12px; font-size:16px; font-weight:600; border:none; }
+  #naming-controls button { flex:1; padding:14px 0; border-radius:12px; font-size:17px; font-weight:700; border:none; }
   #btn-retry { background:#0a84ff; color:#fff; }
   #btn-edit { background:#0a84ff; color:#fff; }
-  #btn-annotate-new { background:#ffd60a; color:#000; }
-  #btn-save { background:#34c759; color:#000; }
+  #btn-annotate-new { background:#ffd60a; color:#fff; font-weight:700; }
+  #btn-save { background:#30d158; color:#fff; font-weight:700; }
   #naming-controls button:disabled { opacity:.4; }
-  #naming-controls button { font-size:13px; padding:14px 0; }
+  #naming-controls button { font-size:15px; padding:14px 0; font-weight:700; }
 
   /* ---------- Gallery view ---------- */
   #gallery-view { flex:1; overflow-y:auto; padding:10px; display:none; background:#0a0a0a; }
@@ -739,8 +739,9 @@
   .pdf-coverphoto-none { display:flex; align-items:center; justify-content:center; color:#999; font-size:11px; font-weight:600; }
 
   #toast { position:fixed; bottom:90px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:60; }
+  #toast.success { top:50%; bottom:auto; transform:translateY(-50%); }
   #toast div { background:rgba(40,40,40,.95); color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; opacity:0; transition:opacity .25s; }
-  #toast div.success { background:#34c759; color:#000; font-weight:700; }
+  #toast div.success { background:#34c759; color:#fff; font-weight:700; font-size:20px; padding:18px 30px; border-radius:16px; }
 
   /* ---------- Photo detail modal ---------- */
   #detail-modal { position:fixed; inset:0; background:#000; display:none; flex-direction:column; z-index:70; }
