@@ -314,6 +314,7 @@
   /* ---------------- State ---------------- */
   let stream = null;
   let facingMode = 'environment';
+  let lastFrameSignature = null; // detects a frozen camera feed (see capturePhoto)
   let pendingBlob = null;     // photo awaiting a name
   let pendingOriginalBlob = null; // pre-markup blob, set only if the pending photo was annotated before save
   let currentTranscript = '';
@@ -1301,6 +1302,7 @@
         audio: false,
       });
       els.video.srcObject = stream;
+      lastFrameSignature = null; // fresh stream — don't compare against a frame from the old one
       els.video.onloadedmetadata = () => {
         if (els.shutter) els.shutter.disabled = false;
         els.camStatus.textContent = '';
@@ -1309,6 +1311,25 @@
       resizePreviewCanvas();
       drawLoopActive = true;
       requestAnimationFrame(drawFrame);
+      // iOS occasionally suspends or kills the video track mid-session (thermal/resource
+      // pressure, Siri, a phone call) without the page getting an error — the <video>
+      // element just keeps showing its last frame forever. mute/ended fire when that
+      // happens; lock the shutter and recover automatically instead of leaving the user
+      // capturing the same frozen frame on every tap.
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        track.onmute = () => {
+          if (els.shutter) els.shutter.disabled = true;
+          els.camStatus.textContent = 'Camera paused — reconnecting…';
+        };
+        track.onunmute = () => {
+          if (els.shutter) els.shutter.disabled = false;
+          els.camStatus.textContent = '';
+        };
+        track.onended = () => {
+          if (!els.cameraView.classList.contains('hidden')) startCamera();
+        };
+      }
     } catch (err) {
       if (els.shutter) els.shutter.disabled = false; // don't strand the user behind a dead button
       els.camStatus.textContent = 'Camera access denied or unavailable. Check Settings > Safari > Camera.';
@@ -1931,8 +1952,28 @@
     }, 'image/jpeg', 0.92);
   });
 
+  // Cheap downsampled pixel fingerprint of the current video frame. A real camera
+  // sensor never produces two bit-identical frames (noise alone guarantees that), so
+  // an exact match against the previous capture means the feed is frozen — the field
+  // report this guards against: shutter kept prompting for new names while silently
+  // resaving the same photo.
+  function frameSignature(video) {
+    const c = document.createElement('canvas');
+    c.width = 12; c.height = 12;
+    const cx = c.getContext('2d');
+    cx.drawImage(video, 0, 0, 12, 12);
+    return cx.getImageData(0, 0, 12, 12).data.join(',');
+  }
+
   function capturePhoto() {
     const video = els.video;
+    const signature = frameSignature(video);
+    if (lastFrameSignature !== null && signature === lastFrameSignature) {
+      toast('Camera feed looks frozen — restarting camera. Tap the shutter again.');
+      startCamera();
+      return;
+    }
+    lastFrameSignature = signature;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
