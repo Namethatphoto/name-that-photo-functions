@@ -580,20 +580,40 @@
     const q = encodeURIComponent(
       `mimeType='application/vnd.google-apps.folder' and '${rootId}' in parents and trashed=false`
     );
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=name`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    return data.files || [];
+    let folders = [];
+    let pageToken = '';
+    do {
+      const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name),nextPageToken&orderBy=name&pageSize=1000${pageParam}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      folders = folders.concat(data.files || []);
+      pageToken = data.nextPageToken || '';
+    } while (pageToken);
+    return folders;
   }
 
   async function listDriveFilesInFolder(folderId, token) {
+    // Drive's files.list defaults to a max of 100 results per call and returns a
+    // nextPageToken when more exist — without paging through it, any project with
+    // more than 100 photos silently gets truncated on pull. Page through until
+    // nextPageToken is empty so every file actually comes back.
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&orderBy=name`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    return data.files || [];
+    let files = [];
+    let pageToken = '';
+    do {
+      const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType),nextPageToken&orderBy=name&pageSize=1000${pageParam}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      files = files.concat(data.files || []);
+      pageToken = data.nextPageToken || '';
+    } while (pageToken);
+    return files;
   }
 
   async function downloadDriveFile(fileId, token) {
