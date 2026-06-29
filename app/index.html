@@ -1577,4 +1577,10 @@
   // the client, so this alone never grants access.
   window.fbGetIdToken = () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null));
 
-  onA
+  onAuthStateChanged(auth, (user) => {
+    window.dispatchEvent(new CustomEvent('fb-auth-changed', { detail: { user } }));
+  });
+</script>
+<script src="app.js"></script>
+</body>
+</html>
