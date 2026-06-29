@@ -600,13 +600,18 @@
     // nextPageToken when more exist — without paging through it, any project with
     // more than 100 photos silently gets truncated on pull. Page through until
     // nextPageToken is empty so every file actually comes back.
+    //
+    // Ordered by createdTime (oldest first) rather than name: Sync to Drive uploads
+    // photos in capture order, so Drive's own createdTime timestamps track capture
+    // order closely. Filenames are the voice-spoken names, not timestamps, so
+    // ordering by name scrambles the on-site shooting sequence.
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     let files = [];
     let pageToken = '';
     do {
       const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
       const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType),nextPageToken&orderBy=name&pageSize=1000${pageParam}`,
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,createdTime),nextPageToken&orderBy=createdTime&pageSize=1000${pageParam}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();

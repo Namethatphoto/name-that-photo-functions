@@ -149,30 +149,30 @@
   #cam-status { position:absolute; top:env(safe-area-inset-top, 12px); left:0; right:0;
     text-align:center; padding-top:12px; font-size:13px; color:#ccc; text-shadow:0 1px 2px #000; }
   #flip-cam { position:absolute; bottom:36px; right:24px; width:44px; height:44px;
-    border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:18px; }
+    border-radius:50%; background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:18px; font-weight:700; }
   #pick-photo { position:absolute; bottom:36px; left:24px; width:44px; height:44px;
-    border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:18px; }
+    border-radius:50%; background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:18px; font-weight:700; }
   #compass-toggle { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 44px); right:16px;
-    width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.45); border:1px solid #555;
-    color:#fff; font-size:18px; }
+    width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.8); border:2px solid #999;
+    color:#fff; font-size:18px; font-weight:700; }
   #compass-toggle.active { background:#0a84ff; border-color:#0a84ff; }
   #compass-readout { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 92px); right:16px;
-    background:rgba(0,0,0,.55); color:#fff; font-size:13px; font-weight:600; padding:5px 9px;
+    background:rgba(0,0,0,.82); color:#fff; font-size:13px; font-weight:700; padding:5px 9px;
     border-radius:8px; text-align:center; min-width:54px; text-shadow:0 1px 2px #000; }
   #compass-readout.hidden { display:none; }
   /* Right-anchored (not left:54px) so this row never collides with the wider
      "Exit App" text pill on the opposite side of the same top row. */
   #live-controls { position:fixed; top:env(safe-area-inset-top, 10px);
     right:calc(env(safe-area-inset-right, 0px) + 10px); z-index:90; display:flex; gap:8px; }
-  #live-toggle { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px; font-weight:600;
+  #live-toggle { background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:13px; font-weight:700;
     padding:8px 12px; border-radius:18px; }
   #live-toggle.active { background:#cc2b2b; border-color:#cc2b2b; }
-  #live-record-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px;
-    font-weight:600; padding:8px 12px; border-radius:18px; }
+  #live-record-btn { background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:13px;
+    font-weight:700; padding:8px 12px; border-radius:18px; }
   #live-record-btn.hidden { display:none; }
   #live-record-btn.recording { background:#cc2b2b; border-color:#cc2b2b; }
-  #live-setup-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:14px;
-    width:34px; height:34px; border-radius:50%; }
+  #live-setup-btn { background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:14px;
+    font-weight:700; width:34px; height:34px; border-radius:50%; }
   #live-badge { position:fixed; top:calc(env(safe-area-inset-top, 10px) + 44px);
     right:calc(env(safe-area-inset-right, 0px) + 10px);
     background:#cc2b2b; color:#fff; font-size:12px; font-weight:700; padding:4px 9px; border-radius:8px;
@@ -297,8 +297,8 @@
      existing Daily.co room as a viewing/talking participant, using the link the
      inspector already shares via shareLiveLink() when they go live. This is the
      reverse direction of #live-toggle (which broadcasts this device's own camera). */
-  #watch-live-btn { background:rgba(0,0,0,.45); border:1px solid #555; color:#fff; font-size:13px;
-    font-weight:600; padding:8px 12px; border-radius:18px; }
+  #watch-live-btn { background:rgba(0,0,0,.8); border:2px solid #999; color:#fff; font-size:13px;
+    font-weight:700; padding:8px 12px; border-radius:18px; }
   #watch-live-btn.hidden { display:none; }
   /* On desktop, pull Watch Live out of #live-controls (which sits in the old top-left
      icon row) and put it in the top-right corner, level with #exit-app's top-left
@@ -323,13 +323,13 @@
   #watch-live-pointer-zone { position:absolute; inset:0; cursor:default; }
   #watch-live-toolbar { position:absolute; bottom:20px; left:0; right:0; z-index:6;
     display:flex; justify-content:center; gap:10px; }
-  #watch-live-toolbar button { background:rgba(0,0,0,.6); border:1px solid #555; color:#fff;
-    font-size:13px; font-weight:600; padding:10px 16px; border-radius:20px; }
+  #watch-live-toolbar button { background:rgba(0,0,0,.85); border:2px solid #999; color:#fff;
+    font-size:13px; font-weight:700; padding:10px 16px; border-radius:20px; }
   #watch-live-mute.muted { background:#cc2b2b; border-color:#cc2b2b; }
   #watch-live-leave { background:rgba(204,43,43,.85); border-color:#cc2b2b; }
   #watch-live-close { position:absolute; top:env(safe-area-inset-top, 12px); right:12px; z-index:6;
-    width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid #555;
-    color:#fff; font-size:15px; }
+    width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,.85); border:2px solid #999;
+    color:#fff; font-size:15px; font-weight:700; }
 
   /* Remote pointer — the desk viewer moves their mouse over the video and this dot
      shows up at the matching spot on the inspector's own screen, so the desk user can
