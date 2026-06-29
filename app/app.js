@@ -134,9 +134,10 @@
 
   /* ---------------- Toast ---------------- */
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, type) {
     const t = document.getElementById('toast-text');
     t.textContent = msg;
+    t.classList.toggle('success', type === 'success');
     t.style.opacity = '1';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 1800);
@@ -2278,7 +2279,7 @@
       if (subLocation) record.subLocation = subLocation;
       if (heading != null) record.heading = heading;
       await dbAdd(record);
-      toast('Saved: ' + transcript);
+      toast('Saved: ' + transcript, 'success');
       await refreshGallery();
     })();
   });
