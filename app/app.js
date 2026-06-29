@@ -136,8 +136,10 @@
   let toastTimer;
   function toast(msg, type) {
     const t = document.getElementById('toast-text');
+    const wrap = document.getElementById('toast');
     t.textContent = msg;
     t.classList.toggle('success', type === 'success');
+    wrap.classList.toggle('success', type === 'success');
     t.style.opacity = '1';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 1800);
