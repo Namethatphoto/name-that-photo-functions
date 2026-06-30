@@ -490,6 +490,29 @@
   #folders-close { background:#3a3a3c; color:#fff; }
   #new-folder-add { background:#0a84ff; color:#fff; }
 
+  /* ---------- Buildings modal (task #141 voice follow-up) — same look/structure as
+     the Projects (folders) modal above, so switching/adding a building feels like the
+     same gesture as switching/adding a project, just scoped one level deeper. */
+  #buildings-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+    align-items:center; justify-content:center; z-index:56; }
+  #buildings-modal.active { display:flex; }
+  #buildings-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:380px;
+    padding:18px; max-height:85vh; overflow-y:auto; color:#fff; }
+  #buildings-card h3 { margin:0 0 8px; font-size:16px; }
+  #buildings-help { margin:0 0 16px; font-size:12px; color:#999; line-height:1.4; }
+  #buildings-card .pdf-label { margin:0 0 8px; }
+  #buildings-card .pdf-field-row { margin-bottom:4px; }
+  #buildings-list { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; max-height:30vh; overflow-y:auto; }
+  #buildings-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; }
+  .building-row { display:flex; align-items:center; gap:8px; background:#2c2c2e; border-radius:10px; padding:10px 12px; }
+  .building-row.current { border:2px solid #0a84ff; }
+  .building-row-name { flex:1; min-width:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .building-row-tag { font-size:11px; font-weight:700; color:#30d158; flex:0 0 auto; }
+  #buildings-actions { display:flex; gap:10px; margin-top:16px; }
+  #buildings-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
+  #buildings-close { background:#3a3a3c; color:#fff; }
+  #new-building-add { background:#0a84ff; color:#fff; }
+
   /* ---------- Pull from Drive modal (tasks #126-128) ---------- */
   #drive-pull-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
     align-items:center; justify-content:center; z-index:56; }
@@ -1240,6 +1263,26 @@
     <div id="folders-actions">
       <button id="folders-close">Close</button>
       <button id="new-folder-add">Add &amp; Switch</button>
+    </div>
+  </div>
+</div>
+
+<div id="buildings-modal">
+  <div id="buildings-card">
+    <h3>Buildings</h3>
+    <p id="buildings-help">Tap a building below to switch to it, or add a new one. Every photo you save stays tagged with whichever building is active.</p>
+
+    <div id="buildings-list"></div>
+
+    <div class="pdf-label">Add a Building</div>
+    <div class="pdf-field-row">
+      <input id="new-building-input" type="text" placeholder="e.g. Main House, Detached Garage" autocapitalize="words" autocomplete="off" autocorrect="off" spellcheck="false" name="new-building-noautofill">
+      <button id="new-building-mic" class="mic-btn" title="Speak">🎤</button>
+    </div>
+
+    <div id="buildings-actions">
+      <button id="buildings-close">Close</button>
+      <button id="new-building-add">Add &amp; Switch</button>
     </div>
   </div>
 </div>

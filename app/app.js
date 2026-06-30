@@ -272,6 +272,12 @@
     newFolderMic: document.getElementById('new-folder-mic'),
     foldersClose: document.getElementById('folders-close'),
     newFolderAdd: document.getElementById('new-folder-add'),
+    buildingsModal: document.getElementById('buildings-modal'),
+    buildingsList: document.getElementById('buildings-list'),
+    newBuildingInput: document.getElementById('new-building-input'),
+    newBuildingMic: document.getElementById('new-building-mic'),
+    buildingsClose: document.getElementById('buildings-close'),
+    newBuildingAdd: document.getElementById('new-building-add'),
     projectGate: document.getElementById('project-gate'),
     projectGateCreate: document.getElementById('project-gate-create'),
     projectGateSelect: document.getElementById('project-gate-select'),
@@ -380,32 +386,66 @@
     els.buildingReadout.classList.toggle('hidden', !currentBuilding);
   }
 
-  // Single native prompt() handles both "add a building" and "switch buildings" —
-  // matches the existing prompt()-based quick-entry pattern used for renaming a
-  // project and typing a photo name, instead of introducing a new modal.
-  async function openBuildingMenu() {
-    let msg;
-    if (projectBuildings.length) {
-      msg = 'Buildings for this project:\n' +
-        projectBuildings.map((b, i) => `${i + 1}. ${b}${b === currentBuilding ? '  (current)' : ''}`).join('\n') +
-        '\n\nType a number to switch, or type a new name to add a building.';
-    } else {
-      msg = 'No buildings added yet. Type a name for the first one (e.g. "Main House" or "Detached Garage").';
+  // Buildings modal — replaced the original prompt()-based menu (task #141 follow-up)
+  // so the "Add a Building" field can carry a mic button, same as every other
+  // free-text field in this app (project name, photo name, PDF fields). Tapping an
+  // existing building row switches to it with one tap; speaking or typing a new name
+  // into the input and tapping Add & Switch creates one. Selecting by voice means
+  // dictating the name into the input — there is no "say the number" voice path,
+  // since the mic only ever targets the one text field, matching attachDictation's
+  // existing one-field-per-button design used everywhere else in the app.
+  function renderBuildingsList() {
+    els.buildingsList.innerHTML = '';
+    if (!projectBuildings.length) {
+      const empty = document.createElement('div');
+      empty.id = 'buildings-empty';
+      empty.textContent = 'No buildings added yet for this project.';
+      els.buildingsList.appendChild(empty);
+      return;
     }
-    const input = prompt(msg, '');
-    if (input === null) return;
-    const typed = input.trim();
-    if (!typed) return;
-    const asIndex = Number(typed);
-    if (Number.isInteger(asIndex) && asIndex >= 1 && asIndex <= projectBuildings.length) {
-      currentBuilding = projectBuildings[asIndex - 1];
-    } else {
-      if (!projectBuildings.includes(typed)) projectBuildings.push(typed);
-      currentBuilding = typed;
-    }
+    projectBuildings.forEach((b) => {
+      const row = document.createElement('div');
+      row.className = 'building-row' + (b === currentBuilding ? ' current' : '');
+      const name = document.createElement('div');
+      name.className = 'building-row-name';
+      name.textContent = b;
+      row.appendChild(name);
+      if (b === currentBuilding) {
+        const tag = document.createElement('div');
+        tag.className = 'building-row-tag';
+        tag.textContent = 'CURRENT';
+        row.appendChild(tag);
+      }
+      row.addEventListener('click', () => {
+        currentBuilding = b;
+        saveBuildingState(currentFolderId);
+        updateBuildingReadout();
+        toast(`Building: ${currentBuilding}`);
+        closeBuildingsModal();
+      });
+      els.buildingsList.appendChild(row);
+    });
+  }
+
+  function openBuildingsModal() {
+    els.newBuildingInput.value = '';
+    renderBuildingsList();
+    els.buildingsModal.classList.add('active');
+  }
+
+  function closeBuildingsModal() {
+    els.buildingsModal.classList.remove('active');
+  }
+
+  function addBuildingFromInput() {
+    const typed = els.newBuildingInput.value.trim();
+    if (!typed) { alert('Enter or speak a building name.'); return; }
+    if (!projectBuildings.includes(typed)) projectBuildings.push(typed);
+    currentBuilding = typed;
     saveBuildingState(currentFolderId);
     updateBuildingReadout();
     toast(`Building: ${currentBuilding}`);
+    closeBuildingsModal();
   }
 
   /* ---------------- Folders (properties) ---------------- */
@@ -1183,7 +1223,10 @@
     compassHeading = null;
   }
 
-  if (els.buildingToggle) els.buildingToggle.addEventListener('click', openBuildingMenu);
+  if (els.buildingToggle) els.buildingToggle.addEventListener('click', openBuildingsModal);
+  if (els.buildingsClose) els.buildingsClose.addEventListener('click', closeBuildingsModal);
+  if (els.newBuildingAdd) els.newBuildingAdd.addEventListener('click', addBuildingFromInput);
+  attachDictation(els.newBuildingMic, els.newBuildingInput);
 
   els.compassToggle.addEventListener('click', async () => {
     if (compassOn) {
