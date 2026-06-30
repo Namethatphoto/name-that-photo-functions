@@ -155,6 +155,8 @@
     flipCam: document.getElementById('flip-cam'),
     pickPhoto: document.getElementById('pick-photo'),
     compassToggle: document.getElementById('compass-toggle'),
+    buildingToggle: document.getElementById('building-toggle'),
+    buildingReadout: document.getElementById('building-readout'),
     liveToggle: document.getElementById('live-toggle'),
     liveBadge: document.getElementById('live-badge'),
     liveRecordBtn: document.getElementById('live-record-btn'),
@@ -342,6 +344,70 @@
   let folderSearchQuery = ''; // lowercase filter typed into the properties modal search box
   let gallerySearchQuery = ''; // lowercase filter typed into the gallery's photo-name search box
 
+  // Multi-building support (task #141) — buildings are scoped per project/folder, not
+  // per-photo like category/subLocation: unlike those, a building must persist across
+  // many shots until the inspector physically moves to a different structure and
+  // explicitly switches, so it lives in localStorage keyed by folder rather than
+  // resetting in closeNaming(). projectBuildings is the list created so far (free-text,
+  // on the fly); currentBuilding ('' by default) is stamped onto every photo saved
+  // while it's active. Reports/galleries for projects that never touch this feature are
+  // byte-for-byte unaffected — see groupIntoSections()'s early-return for the no-building case.
+  let projectBuildings = [];
+  let currentBuilding = '';
+
+  function buildingStorageKey(folderId) { return 'pn_buildings_' + folderId; }
+
+  function loadBuildingState(folderId) {
+    projectBuildings = [];
+    currentBuilding = '';
+    try {
+      const raw = localStorage.getItem(buildingStorageKey(folderId));
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.list)) projectBuildings = data.list;
+        if (typeof data.current === 'string') currentBuilding = data.current;
+      }
+    } catch (err) { /* corrupt/missing — fall back to no buildings */ }
+  }
+
+  function saveBuildingState(folderId) {
+    localStorage.setItem(buildingStorageKey(folderId), JSON.stringify({ list: projectBuildings, current: currentBuilding }));
+  }
+
+  function updateBuildingReadout() {
+    if (!els.buildingReadout) return;
+    els.buildingReadout.textContent = currentBuilding || '';
+    els.buildingReadout.classList.toggle('hidden', !currentBuilding);
+  }
+
+  // Single native prompt() handles both "add a building" and "switch buildings" —
+  // matches the existing prompt()-based quick-entry pattern used for renaming a
+  // project and typing a photo name, instead of introducing a new modal.
+  async function openBuildingMenu() {
+    let msg;
+    if (projectBuildings.length) {
+      msg = 'Buildings for this project:\n' +
+        projectBuildings.map((b, i) => `${i + 1}. ${b}${b === currentBuilding ? '  (current)' : ''}`).join('\n') +
+        '\n\nType a number to switch, or type a new name to add a building.';
+    } else {
+      msg = 'No buildings added yet. Type a name for the first one (e.g. "Main House" or "Detached Garage").';
+    }
+    const input = prompt(msg, '');
+    if (input === null) return;
+    const typed = input.trim();
+    if (!typed) return;
+    const asIndex = Number(typed);
+    if (Number.isInteger(asIndex) && asIndex >= 1 && asIndex <= projectBuildings.length) {
+      currentBuilding = projectBuildings[asIndex - 1];
+    } else {
+      if (!projectBuildings.includes(typed)) projectBuildings.push(typed);
+      currentBuilding = typed;
+    }
+    saveBuildingState(currentFolderId);
+    updateBuildingReadout();
+    toast(`Building: ${currentBuilding}`);
+  }
+
   /* ---------------- Folders (properties) ---------------- */
   // Ensures at least one folder exists, restores the last-active folder from
   // localStorage (falling back to the first folder), and buckets any legacy
@@ -370,6 +436,8 @@
     currentFolderId = active.id;
     currentFolderName = active.name;
     updateFolderChip();
+    loadBuildingState(currentFolderId);
+    updateBuildingReadout();
   }
 
   const HAS_CREATED_PROJECT_KEY = 'pn_has_created_project';
@@ -833,6 +901,8 @@
     currentFolderName = name;
     localStorage.setItem(CURRENT_FOLDER_KEY, folderId);
     updateFolderChip();
+    loadBuildingState(currentFolderId);
+    updateBuildingReadout();
 
     selectMode = false;
     selectedIds.clear();
@@ -1112,6 +1182,8 @@
     window.removeEventListener('deviceorientation', handleOrientation, true);
     compassHeading = null;
   }
+
+  if (els.buildingToggle) els.buildingToggle.addEventListener('click', openBuildingMenu);
 
   els.compassToggle.addEventListener('click', async () => {
     if (compassOn) {
@@ -2300,6 +2372,7 @@
     const category = pendingCategory;
     const subLocation = pendingSubLocation;
     const heading = pendingHeading;
+    const building = currentBuilding; // persists across photos — not reset in closeNaming()
     closeNaming();
     // Advance to the next queued photo (and start its mic) synchronously, in the same
     // gesture as this click. Any await here — even a fast one — can push recognition.start()
@@ -2321,6 +2394,7 @@
       if (category) record.category = category;
       if (subLocation) record.subLocation = subLocation;
       if (heading != null) record.heading = heading;
+      if (building) record.building = building;
       await dbAdd(record);
       toast('Saved: ' + transcript, 'success');
       await refreshGallery();
@@ -2642,7 +2716,7 @@
       }
       const label = document.createElement('div');
       label.className = 'label';
-      label.textContent = rec.name;
+      label.textContent = rec.building ? `[${rec.building}] ${rec.name}` : rec.name;
       const selectDot = document.createElement('div');
       selectDot.className = 'select-dot';
       const dragHandle = document.createElement('div');
@@ -3944,7 +4018,7 @@
     return [2, 0, ''];
   }
 
-  function groupIntoSections(records) {
+  function groupByCategory(records) {
     const buckets = new Map(CATEGORY_ORDER.map((c) => [c.key, []]));
     records.forEach((rec) => buckets.get(bucketKey(rec)).push(rec));
     buckets.forEach((arr) => arr.sort((a, b) => {
@@ -3957,6 +4031,32 @@
     return CATEGORY_ORDER
       .map((c) => ({ key: c.key, title: c.title, records: buckets.get(c.key) }))
       .filter((s) => s.records.length);
+  }
+
+  // Multi-building claims (e.g. main house + detached garage on one customer's claim)
+  // get an extra outer grouping layer, building before category, so the report reads
+  // as "walk Building A top-to-bottom, then Building B" instead of interleaving
+  // exterior/roof/interior photos from different structures. Untagged reports (the
+  // common case — single structure) are completely unaffected: groupByCategory() runs
+  // exactly as before with no building layer at all.
+  function groupIntoSections(records) {
+    if (!records.some((r) => r.building)) return groupByCategory(records);
+    const order = [];
+    records.forEach((r) => {
+      const b = r.building || 'Unassigned';
+      if (!order.includes(b)) order.push(b);
+    });
+    let sections = [];
+    order.forEach((b) => {
+      const subset = records.filter((r) => (r.building || 'Unassigned') === b);
+      const catSections = groupByCategory(subset).map((s) => ({
+        key: b + '::' + s.key,
+        title: `${b} — ${s.title}`,
+        records: s.records,
+      }));
+      sections = sections.concat(catSections);
+    });
+    return sections;
   }
 
   // Same idea as loadImageEl, but for the cover-page logo, which is already a data URL

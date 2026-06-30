@@ -160,6 +160,19 @@
     background:#0a84ff; color:#fff; font-size:13px; font-weight:700; padding:5px 9px;
     border-radius:8px; text-align:center; min-width:54px; text-shadow:0 1px 2px #000; }
   #compass-readout.hidden { display:none; }
+  /* Mirrors #compass-toggle/#compass-readout but on the left side, below #exit-app —
+     always present (same precedent as the compass icon) but stays visually quiet
+     (plain blue icon, no label) until a building is actually added, at which point
+     #building-readout shows the active building name. Single-building projects never
+     see any change beyond this one small icon. */
+  #building-toggle { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 44px); left:16px;
+    width:44px; height:44px; border-radius:50%; background:#0a84ff; border:2px solid #0a84ff;
+    color:#fff; font-size:18px; font-weight:700; z-index:5; }
+  #building-readout { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 92px); left:16px;
+    background:#30d158; color:#fff; font-size:13px; font-weight:700; padding:5px 9px;
+    border-radius:8px; text-align:center; max-width:140px; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; text-shadow:0 1px 2px #000; }
+  #building-readout.hidden { display:none; }
   /* Right-anchored (not left:54px) so this row never collides with the wider
      "Exit App" text pill on the opposite side of the same top row. */
   #live-controls { position:fixed; top:env(safe-area-inset-top, 10px);
@@ -272,7 +285,9 @@
   #camera-view.desktop-cam #shutter-wrap,
   #camera-view.desktop-cam #flip-cam,
   #camera-view.desktop-cam #compass-toggle,
-  #camera-view.desktop-cam #compass-readout { display:none; }
+  #camera-view.desktop-cam #compass-readout,
+  #camera-view.desktop-cam #building-toggle,
+  #camera-view.desktop-cam #building-readout { display:none; }
   /* Desktop never engages a live camera at all (its own placeholder covers that
      job), so the phone-only project gate / start-camera prompt never apply there. */
   #camera-view.desktop-cam #project-gate,
@@ -905,6 +920,8 @@
     <button id="pick-photo" title="Choose Photos or PDFs from Desktop"><span id="pick-photo-icon">🗄️</span><span id="pick-photo-label">Choose Photos or PDFs from Desktop</span></button>
     <button id="compass-toggle" title="Stamp compass heading on photo">🧭</button>
     <div id="compass-readout" class="hidden"></div>
+    <button id="building-toggle" title="Buildings (multi-building projects)">🏢</button>
+    <div id="building-readout" class="hidden"></div>
     <div id="live-controls">
       <button id="live-toggle" title="Let the homeowner watch live">📡 Go Live</button>
       <button id="live-record-btn" class="hidden" title="Record this call">⏺ Record</button>
