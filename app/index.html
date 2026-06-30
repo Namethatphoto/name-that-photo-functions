@@ -640,8 +640,8 @@
   #bulk-bar.active { display:flex; }
   #bulk-count { font-size:14px; color:#ddd; font-weight:600; }
   #bulk-bar-actions { display:flex; flex-wrap:wrap; gap:6px; }
-  #select-all-btn, #bulk-rename, #bulk-markup, #bulk-crop, #bulk-remove-markup, #bulk-categorize, #bulk-pdf, #bulk-share { background:#2a2a2a; color:#fff; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
-  #bulk-rename:disabled, #bulk-markup:disabled, #bulk-crop:disabled, #bulk-remove-markup:disabled, #bulk-categorize:disabled, #bulk-pdf:disabled, #bulk-share:disabled { color:#666; }
+  #select-all-btn, #bulk-rename, #bulk-markup, #bulk-crop, #bulk-remove-markup, #bulk-categorize, #bulk-move-building, #bulk-move-project, #bulk-pdf, #bulk-share { background:#2a2a2a; color:#fff; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
+  #bulk-rename:disabled, #bulk-markup:disabled, #bulk-crop:disabled, #bulk-remove-markup:disabled, #bulk-categorize:disabled, #bulk-move-building:disabled, #bulk-move-project:disabled, #bulk-pdf:disabled, #bulk-share:disabled { color:#666; }
   #bulk-delete { background:#3a1414; color:#ff453a; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
   #bulk-delete:disabled { color:#666; }
 
@@ -681,6 +681,37 @@
   #recat-actions button { flex:1; padding:10px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
   #recat-cancel { background:#3a3a3c; color:#fff; }
   #recat-save { background:#0a84ff; color:#fff; }
+
+  /* Move-to-Building modal (task #143) — lets a photo accidentally tagged under the
+     wrong building (or no building) get reassigned after the fact, same after-the-fact
+     correction role the Recategorize modal above plays for category. One tap on a row
+     moves it and closes, same gesture as switching buildings via #buildings-modal —
+     reuses its .building-row/-name/-tag classes for visual consistency. */
+  #move-building-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+    align-items:center; justify-content:center; z-index:75; }
+  #move-building-modal.active { display:flex; }
+  #move-building-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:380px;
+    padding:18px; max-height:85vh; overflow-y:auto; color:#fff; }
+  #move-building-card h3 { margin:0 0 8px; font-size:15px; }
+  #move-building-help { margin:0 0 16px; font-size:12px; color:#999; line-height:1.4; }
+  #move-building-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:40vh; overflow-y:auto; }
+  #move-building-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; line-height:1.5; }
+  #move-building-actions { display:flex; gap:10px; margin-top:16px; }
+  #move-building-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
+  #move-building-cancel { background:#3a3a3c; color:#fff; }
+
+  #move-project-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+    align-items:center; justify-content:center; z-index:75; }
+  #move-project-modal.active { display:flex; }
+  #move-project-card { background:#1c1c1e; border-radius:14px; width:88%; max-width:380px;
+    padding:18px; max-height:85vh; overflow-y:auto; color:#fff; }
+  #move-project-card h3 { margin:0 0 8px; font-size:15px; }
+  #move-project-help { margin:0 0 16px; font-size:12px; color:#999; line-height:1.4; }
+  #move-project-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:40vh; overflow-y:auto; }
+  #move-project-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; line-height:1.5; }
+  #move-project-actions { display:flex; gap:10px; margin-top:16px; }
+  #move-project-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
+  #move-project-cancel { background:#3a3a3c; color:#fff; }
 
   /* PDF report options modal */
   #pdf-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
@@ -1063,6 +1094,8 @@
         <button id="bulk-crop" disabled title="Crop, zoom, or resize the selected photo (select exactly 1)">Crop</button>
         <button id="bulk-remove-markup" disabled title="Restore the selected photo's original, pre-edit version (select exactly 1)">Restore original</button>
         <button id="bulk-categorize" disabled title="Assign a report category to the selected photos">Categorize</button>
+        <button id="bulk-move-building" disabled title="Move the selected photos to a different building">Move Building</button>
+        <button id="bulk-move-project" disabled title="Move the selected photos to a different project">Move Project</button>
         <button id="bulk-pdf" disabled title="PDF report of selected photos">Create PDF</button>
         <button id="bulk-share" disabled title="Send the selected photos/videos (e.g. by text)">Send</button>
         <button id="bulk-delete" disabled>Delete</button>
@@ -1199,6 +1232,28 @@
     <div id="recat-actions">
       <button id="recat-cancel">Cancel</button>
       <button id="recat-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="move-building-modal">
+  <div id="move-building-card">
+    <h3 id="move-building-title">Move to Building</h3>
+    <p id="move-building-help">Tap a building to move the selected photo(s) there. This only changes which building it's tagged under — nothing else about the photo changes.</p>
+    <div id="move-building-list"></div>
+    <div id="move-building-actions">
+      <button id="move-building-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="move-project-modal">
+  <div id="move-project-card">
+    <h3 id="move-project-title">Move to Project</h3>
+    <p id="move-project-help">Tap a project to move the selected photo(s) there. They'll disappear from this project's gallery and appear in the one you choose. Any building tag is cleared, since buildings are specific to each project.</p>
+    <div id="move-project-list"></div>
+    <div id="move-project-actions">
+      <button id="move-project-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -1502,6 +1557,8 @@
     <button id="detail-share">Send</button>
     <button id="detail-rename">Rename</button>
     <button id="detail-categorize">Categorize</button>
+    <button id="detail-move-building">Move Building</button>
+    <button id="detail-move-project">Move Project</button>
     <button id="detail-delete">Delete</button>
   </div>
 </div>

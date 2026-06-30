@@ -244,6 +244,8 @@
     bulkCrop: document.getElementById('bulk-crop'),
     bulkRemoveMarkup: document.getElementById('bulk-remove-markup'),
     bulkCategorize: document.getElementById('bulk-categorize'),
+    bulkMoveBuilding: document.getElementById('bulk-move-building'),
+    bulkMoveProject: document.getElementById('bulk-move-project'),
     bulkPdf: document.getElementById('bulk-pdf'),
     bulkShare: document.getElementById('bulk-share'),
     bulkDelete: document.getElementById('bulk-delete'),
@@ -259,6 +261,14 @@
     recatRoomSelect: document.getElementById('recat-room-select'),
     recatCancel: document.getElementById('recat-cancel'),
     recatSave: document.getElementById('recat-save'),
+    moveBuildingModal: document.getElementById('move-building-modal'),
+    moveBuildingTitle: document.getElementById('move-building-title'),
+    moveBuildingList: document.getElementById('move-building-list'),
+    moveBuildingCancel: document.getElementById('move-building-cancel'),
+    moveProjectModal: document.getElementById('move-project-modal'),
+    moveProjectTitle: document.getElementById('move-project-title'),
+    moveProjectList: document.getElementById('move-project-list'),
+    moveProjectCancel: document.getElementById('move-project-cancel'),
     createProjectPill: document.getElementById('create-project-pill'),
     projectBanner: document.getElementById('project-banner'),
     projectBannerLabel: document.getElementById('project-banner-label'),
@@ -435,6 +445,17 @@
 
   function closeBuildingsModal() {
     els.buildingsModal.classList.remove('active');
+    if (els.newBuildingInput) els.newBuildingInput.blur();
+    // Restart the live feed on close (task #141 follow-up — reported as "camera stuck
+    // on last photo" after switching buildings). Focusing the building-name field wakes
+    // the iOS keyboard, which can mute the active camera track without ever firing
+    // onunmute, leaving the preview frozen on whatever frame was showing when the modal
+    // opened. A fresh stopCamera()+startCamera() cycle — the same recovery the Gallery
+    // tab already performs on every visit (see showGallery/showCamera) — guarantees a
+    // live feed again regardless of what iOS did to the old track while the modal was up.
+    if (!isDesktopDevice() && hasRealProject() && !els.cameraView.classList.contains('hidden')) {
+      startCamera();
+    }
   }
 
   function addBuildingFromInput() {
@@ -2917,6 +2938,7 @@
     els.bulkPdf.disabled = n === 0;
     els.bulkShare.disabled = n === 0;
     els.bulkCategorize.disabled = n === 0; // works on any number of selected photos, unlike rename
+    els.bulkMoveBuilding.disabled = n === 0; // same — moving any number of photos at once is fine
     els.bulkRename.disabled = n !== 1; // rename targets one item, so require exactly one selection
 
     // Markup/crop only make sense for a single selected photo — and not for a video
@@ -2948,6 +2970,16 @@
   els.bulkCategorize.addEventListener('click', () => {
     if (selectedIds.size === 0) return;
     openRecategorizeBulk([...selectedIds]);
+  });
+
+  els.bulkMoveBuilding.addEventListener('click', () => {
+    if (selectedIds.size === 0) return;
+    openMoveBuildingBulk([...selectedIds]);
+  });
+
+  els.bulkMoveProject.addEventListener('click', () => {
+    if (selectedIds.size === 0) return;
+    openMoveProjectBulk([...selectedIds]);
   });
 
   els.bulkMarkup.addEventListener('click', async () => {
@@ -3168,6 +3200,143 @@
     refreshGallery();
   });
 
+  /* ---------------- Move to Building modal ----------------
+     Lets a photo accidentally tagged under the wrong building (or saved with no
+     building at all) get reassigned after the fact — the corrective counterpart to
+     the Recategorize modal above, but for rec.building instead of rec.category. Lists
+     whatever buildings already exist for the current project (projectBuildings — see
+     "Multi-building support" above); there's nothing new to create here, just
+     existing names to move into, plus a "No Building" option to un-assign.
+     moveBuildingTargetIds holds one ID (detail view) or several (bulk select),
+     exactly like recatTargetIds does for categorize. */
+  let moveBuildingTargetIds = [];
+
+  function renderMoveBuildingList() {
+    els.moveBuildingList.innerHTML = '';
+    if (!projectBuildings.length) {
+      const empty = document.createElement('div');
+      empty.id = 'move-building-empty';
+      empty.textContent = 'No buildings exist yet for this project. Tap the building icon (🏢) on the camera screen to add one first.';
+      els.moveBuildingList.appendChild(empty);
+      return;
+    }
+    const options = ['', ...projectBuildings]; // '' renders as "No Building" — un-assigns
+    options.forEach((b) => {
+      const row = document.createElement('div');
+      row.className = 'building-row';
+      const name = document.createElement('div');
+      name.className = 'building-row-name';
+      name.textContent = b || 'No Building';
+      row.appendChild(name);
+      row.addEventListener('click', async () => {
+        if (!moveBuildingTargetIds.length) return;
+        const records = await dbGetAll();
+        const targetSet = new Set(moveBuildingTargetIds);
+        const matches = records.filter((r) => targetSet.has(r.id));
+        for (const rec of matches) {
+          if (b) rec.building = b; else delete rec.building;
+          await dbAdd(rec);
+        }
+        closeMoveBuildingModal();
+        toast(b ? `Moved to ${b}` : 'Building removed');
+        refreshGallery();
+      });
+      els.moveBuildingList.appendChild(row);
+    });
+  }
+
+  function openMoveBuilding(rec) {
+    moveBuildingTargetIds = [rec.id];
+    els.moveBuildingTitle.textContent = 'Move to Building';
+    renderMoveBuildingList();
+    els.moveBuildingModal.classList.add('active');
+  }
+
+  // Bulk path: one save target list, shared title shows the count being moved.
+  function openMoveBuildingBulk(ids) {
+    moveBuildingTargetIds = ids;
+    els.moveBuildingTitle.textContent = `Move ${ids.length} photo${ids.length === 1 ? '' : 's'} to Building`;
+    renderMoveBuildingList();
+    els.moveBuildingModal.classList.add('active');
+  }
+
+  function closeMoveBuildingModal() {
+    els.moveBuildingModal.classList.remove('active');
+    moveBuildingTargetIds = [];
+  }
+
+  els.moveBuildingCancel.addEventListener('click', closeMoveBuildingModal);
+
+  /* ---------------- Move to Project modal ----------------
+     Sibling of the Move to Building modal above, but for rec.folderId — corrects a photo
+     filed under the wrong project entirely. Lists every OTHER project (excludes the
+     current one, since moving "into" the project a photo is already in is a no-op).
+     Moving projects also clears rec.building: buildings are names scoped to a single
+     project's projectBuildings list, so a building tag from the old project would be
+     meaningless (and possibly misleading) in the new one. moveProjectTargetIds mirrors
+     moveBuildingTargetIds/recatTargetIds — one id from the detail view, several from a
+     bulk gallery selection. */
+  let moveProjectTargetIds = [];
+
+  async function renderMoveProjectList() {
+    els.moveProjectList.innerHTML = '';
+    const allFolders = await dbGetAllFolders();
+    const others = allFolders.filter((f) => f.id !== currentFolderId);
+    if (!others.length) {
+      const empty = document.createElement('div');
+      empty.id = 'move-project-empty';
+      empty.textContent = 'No other projects exist yet. Create one first from the Projects screen.';
+      els.moveProjectList.appendChild(empty);
+      return;
+    }
+    others.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'building-row';
+      const name = document.createElement('div');
+      name.className = 'building-row-name';
+      name.textContent = f.name || 'Untitled Project';
+      row.appendChild(name);
+      row.addEventListener('click', async () => {
+        if (!moveProjectTargetIds.length) return;
+        const records = await dbGetAll();
+        const targetSet = new Set(moveProjectTargetIds);
+        const matches = records.filter((r) => targetSet.has(r.id));
+        for (const rec of matches) {
+          rec.folderId = f.id;
+          delete rec.building; // building names are scoped to the old project — drop the stale tag
+          await dbAdd(rec);
+        }
+        closeMoveProjectModal();
+        toast(`Moved to ${f.name || 'project'}`);
+        selectedIds.clear();
+        if (detailRecordId && targetSet.has(detailRecordId)) closeDetail();
+        refreshGallery();
+      });
+      els.moveProjectList.appendChild(row);
+    });
+  }
+
+  function openMoveProject(rec) {
+    moveProjectTargetIds = [rec.id];
+    els.moveProjectTitle.textContent = 'Move to Project';
+    renderMoveProjectList();
+    els.moveProjectModal.classList.add('active');
+  }
+
+  function openMoveProjectBulk(ids) {
+    moveProjectTargetIds = ids;
+    els.moveProjectTitle.textContent = `Move ${ids.length} photo${ids.length === 1 ? '' : 's'} to Project`;
+    renderMoveProjectList();
+    els.moveProjectModal.classList.add('active');
+  }
+
+  function closeMoveProjectModal() {
+    els.moveProjectModal.classList.remove('active');
+    moveProjectTargetIds = [];
+  }
+
+  els.moveProjectCancel.addEventListener('click', closeMoveProjectModal);
+
   /* ---------------- Photo detail modal ---------------- */
   const detailEls = {
     modal: document.getElementById('detail-modal'),
@@ -3181,6 +3350,8 @@
     share: document.getElementById('detail-share'),
     rename: document.getElementById('detail-rename'),
     categorize: document.getElementById('detail-categorize'),
+    moveBuilding: document.getElementById('detail-move-building'),
+    moveProject: document.getElementById('detail-move-project'),
     del: document.getElementById('detail-delete'),
     pdfTile: document.getElementById('detail-pdf-tile'),
     pdfOpen: document.getElementById('detail-pdf-open'),
@@ -3259,6 +3430,20 @@
     const records = await dbGetAll();
     const rec = records.find((r) => r.id === detailRecordId);
     if (rec) openRecategorize(rec);
+  });
+
+  detailEls.moveBuilding.addEventListener('click', async () => {
+    if (!detailRecordId) return;
+    const records = await dbGetAll();
+    const rec = records.find((r) => r.id === detailRecordId);
+    if (rec) openMoveBuilding(rec);
+  });
+
+  detailEls.moveProject.addEventListener('click', async () => {
+    if (!detailRecordId) return;
+    const records = await dbGetAll();
+    const rec = records.find((r) => r.id === detailRecordId);
+    if (rec) openMoveProject(rec);
   });
 
   // Sends this one photo or video straight out via the iOS share sheet — Messages
