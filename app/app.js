@@ -6078,13 +6078,28 @@
   if (els.authForgot) {
     els.authForgot.addEventListener('click', async () => {
       const email = els.authEmail.value.trim();
-      if (!email) { showAuthError('Enter your email above, then tap "Forgot password?" again.'); return; }
+      if (!email) {
+        showAuthError('Enter your email address above first, then tap "Forgot password?" again.');
+        els.authEmail.focus();
+        return;
+      }
+      if (typeof window.fbResetPassword !== 'function') {
+        showAuthError('Still loading — wait a moment and try again.');
+        return;
+      }
       clearAuthError();
+      els.authForgot.disabled = true;
+      els.authForgot.textContent = 'Sending…';
       try {
         await window.fbResetPassword(email);
-        toast(`Password reset email sent to ${email}`);
+        showAuthError(`Reset email sent to ${email}. Check your inbox (and spam folder).`);
+        els.authError.style.color = '#30d158'; // green
       } catch (err) {
+        els.authError.style.color = '';
         showAuthError(friendlyAuthError(err));
+      } finally {
+        els.authForgot.disabled = false;
+        els.authForgot.textContent = 'Forgot password?';
       }
     });
   }
