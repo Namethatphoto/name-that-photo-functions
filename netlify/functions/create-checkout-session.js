@@ -1,5 +1,5 @@
-// Serverless function — creates a Stripe Checkout Session for the $17.99/mo subscription
-// with a 2-day free trial (card collected upfront, auto-charges when the trial ends).
+// Serverless function — creates a Stripe Checkout Session for the $17.99/mo subscription.
+// No trial period — subscribers are charged immediately and can cancel anytime.
 //
 // STRIPE_SECRET_KEY and STRIPE_PRICE_ID live ONLY as Netlify environment variables
 // (Site settings > Environment variables) — never in any client-side file. Calling the
@@ -49,15 +49,11 @@ exports.handler = async function (event) {
   }
 
   // client_reference_id carries the Firebase uid through to the webhook (task #63), which is
-  // how the webhook knows which Firestore users/{uid} doc to flip to "trial"/"active".
+  // how the webhook knows which Firestore users/{uid} doc to flip to "active".
   const params = new URLSearchParams();
   params.append('mode', 'subscription');
   params.append('line_items[0][price]', priceId);
   params.append('line_items[0][quantity]', '1');
-  params.append('subscription_data[trial_period_days]', '2');
-  // Forces card collection upfront even though there's a trial — required per the
-  // "card upfront, auto-charges after 2 days" decision (no trial without a payment method).
-  params.append('payment_method_collection', 'always');
   params.append('client_reference_id', uid);
   params.append('success_url', SUCCESS_URL);
   params.append('cancel_url', CANCEL_URL);
