@@ -2939,6 +2939,7 @@
     els.bulkShare.disabled = n === 0;
     els.bulkCategorize.disabled = n === 0; // works on any number of selected photos, unlike rename
     els.bulkMoveBuilding.disabled = n === 0; // same — moving any number of photos at once is fine
+    els.bulkMoveProject.disabled = n === 0; // same — moving any number of photos at once is fine
     els.bulkRename.disabled = n !== 1; // rename targets one item, so require exactly one selection
 
     // Markup/crop only make sense for a single selected photo — and not for a video
