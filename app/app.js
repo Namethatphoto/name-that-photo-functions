@@ -156,6 +156,8 @@
     pickPhoto: document.getElementById('pick-photo'),
     compassToggle: document.getElementById('compass-toggle'),
     buildingToggle: document.getElementById('building-toggle'),
+    galleryBuildingBtn: document.getElementById('gallery-building-btn'),
+    photoCount: document.getElementById('photo-count'),
     buildingReadout: document.getElementById('building-readout'),
     liveToggle: document.getElementById('live-toggle'),
     liveBadge: document.getElementById('live-badge'),
@@ -413,6 +415,10 @@
     const hasBuildings = projectBuildings.length > 0;
     const assignMode = selectMode && selectedIds.size > 0;
 
+    if (els.galleryBuildingBtn) {
+      if (hasBuildings) els.galleryBuildingBtn.classList.add('visible');
+      else els.galleryBuildingBtn.classList.remove('visible');
+    }
     if (hasBuildings) {
       // "All" pill — filter only, not an assign target
       const allPill = document.createElement('button');
@@ -1043,7 +1049,7 @@
     els.selectBtn.classList.remove('active');
     els.selectBtn.textContent = 'Select';
     els.reorderBtn.classList.remove('active');
-    els.reorderBtn.textContent = 'Reorder';
+    els.reorderBtn.textContent = 'Rearrange Photos';
     els.bulkBar.classList.remove('active');
     els.grid.classList.remove('select-mode', 'reorder-mode');
     pdfTitleAutoFilled = true;
@@ -1316,6 +1322,7 @@
   }
 
   if (els.buildingToggle) els.buildingToggle.addEventListener('click', openBuildingsModal);
+  if (els.galleryBuildingBtn) els.galleryBuildingBtn.addEventListener('click', openBuildingsModal);
   if (els.buildingsClose) els.buildingsClose.addEventListener('click', closeBuildingsModal);
   if (els.newBuildingAdd) els.newBuildingAdd.addEventListener('click', addBuildingFromInput);
   attachDictation(els.newBuildingMic, els.newBuildingInput);
@@ -2799,6 +2806,11 @@
     } else {
       els.emptyState.style.display = 'none';
     }
+    if (els.photoCount) {
+      const n = records.length;
+      els.photoCount.textContent = n === 1 ? '1 photo' : `${n} photos`;
+      els.photoCount.classList.toggle('visible', n > 0);
+    }
     els.exportBtn.disabled = allRecords.length === 0;
     els.pdfAllBtn.disabled = allRecords.length === 0;
     els.backupBtn.disabled = allRecords.length === 0;
@@ -3152,7 +3164,7 @@
     if (selectMode && reorderMode) {
       reorderMode = false;
       els.reorderBtn.classList.remove('active');
-      els.reorderBtn.textContent = 'Reorder';
+      els.reorderBtn.textContent = 'Rearrange Photos';
     }
     refreshGallery();
   });
@@ -3160,7 +3172,7 @@
   els.reorderBtn.addEventListener('click', () => {
     reorderMode = !reorderMode;
     els.reorderBtn.classList.toggle('active', reorderMode);
-    els.reorderBtn.textContent = reorderMode ? 'Done' : 'Reorder';
+    els.reorderBtn.textContent = reorderMode ? 'Done' : 'Rearrange Photos';
     if (reorderMode && selectMode) {
       selectMode = false;
       selectedIds.clear();
