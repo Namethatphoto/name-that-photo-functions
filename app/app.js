@@ -340,8 +340,13 @@
   let facingMode = 'environment';
   let lastFrameSignature = null; // detects a frozen camera feed (see capturePhoto)
   const SILENT_MODE_KEY = 'pn_silent_mode';
+  const AUTO_SYNC_KEY = 'pn_auto_sync';
+  const AUTO_SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
   let silentMode = localStorage.getItem(SILENT_MODE_KEY) === '1';
-  let silentPhotoCount = 0; // session counter for auto-named photos
+  let silentPhotoCount = 0;
+  let autoSyncEnabled = localStorage.getItem(AUTO_SYNC_KEY) === '1';
+  let autoSyncTimer = null;
+  let autoSyncRunning = false; // session counter for auto-named photos
   let pendingBlob = null;     // photo awaiting a name
   let pendingOriginalBlob = null; // pre-markup blob, set only if the pending photo was annotated before save
   let currentTranscript = '';
@@ -699,6 +704,63 @@
   // synced yet into Drive/Name That Photo/<project name>. Each record is flagged
   // driveSynced (mirrors the backedUp flag pattern from Backup-to-Photos) so
   // re-running only sends what's new.
+  async // ── Auto-Sync (timer-based, silent) ──────────────────────────────────────────
+  async function autoSyncToDrive() {
+    if (autoSyncRunning) return;           // don't stack if previous run is still going
+    if (!currentFolderId) return;          // no project selected
+    const token = await getDriveAccessToken({ interactive: false });
+    if (!token) return;                    // not signed in — skip silently
+    const records = await getFolderPhotos(currentFolderId);
+    const pending = records.filter((r) => !r.driveSynced);
+    if (!pending.length) return;           // nothing new to upload
+    autoSyncRunning = true;
+    try {
+      if (!driveRootFolderId) driveRootFolderId = await ensureDriveFolder(DRIVE_ROOT_FOLDER_NAME, null, token);
+      const projectFolderId = await ensureDriveFolder(currentFolderName || 'Untitled Project', driveRootFolderId, token);
+      const usedNames = new Map();
+      let synced = 0;
+      for (const rec of pending) {
+        const isVideo = rec.kind === 'video';
+        const mimeType = rec.blob.type || (isVideo ? 'video/mp4' : 'image/jpeg');
+        const ext = isVideo ? (mimeType.includes('mp4') ? 'mp4' : 'webm') : (rec.kind === 'pdf' ? 'pdf' : 'jpg');
+        const base = sanitizeFilename(rec.name);
+        const count = usedNames.get(base) || 0;
+        usedNames.set(base, count + 1);
+        const filename = count === 0 ? `${base}.${ext}` : `${base}_${count + 1}.${ext}`;
+        try {
+          const result = await uploadFileToDrive(projectFolderId, filename, rec.blob, mimeType, token);
+          rec.driveSynced = true;
+          rec.driveFileId = result.id;
+          await dbPutAll([rec]);
+          synced += 1;
+        } catch (e) { break; } // network error — try again next interval
+      }
+      if (synced > 0) {
+        toast(`☁️ Auto-synced ${synced} photo${synced === 1 ? '' : 's'} to Drive`);
+        refreshGallery();
+      }
+    } catch (e) { /* silent — try again next interval */ }
+    finally { autoSyncRunning = false; }
+  }
+
+  function applyAutoSyncToggle() {
+    const btn = document.getElementById('auto-sync-btn');
+    if (!btn) return;
+    btn.textContent = autoSyncEnabled ? '⏱️ Auto-Sync: On' : '⏱️ Auto-Sync: Off';
+    btn.style.background = autoSyncEnabled ? '#30d158' : '';
+    btn.style.borderColor = autoSyncEnabled ? '#30d158' : '';
+  }
+
+  function startAutoSync() {
+    if (autoSyncTimer) clearInterval(autoSyncTimer);
+    autoSyncToDrive(); // run immediately on enable
+    autoSyncTimer = setInterval(autoSyncToDrive, AUTO_SYNC_INTERVAL_MS);
+  }
+
+  function stopAutoSync() {
+    if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
+  }
+
   async function syncFolderToDrive() {
     // Request the Drive token FIRST — before any other await. iOS Safari (and the installed
     // PWA's standalone mode is even stricter about this) revokes "user activation" the moment
@@ -769,6 +831,32 @@
     els.driveDisconnectBtn.addEventListener('click', disconnectDrive);
   }
   if (els.driveSyncBtn) els.driveSyncBtn.addEventListener('click', syncFolderToDrive);
+
+  // Auto-sync toggle
+  const autoSyncBtn = document.getElementById('auto-sync-btn');
+  if (autoSyncBtn) {
+    applyAutoSyncToggle();
+    autoSyncBtn.addEventListener('click', () => {
+      autoSyncEnabled = !autoSyncEnabled;
+      localStorage.setItem(AUTO_SYNC_KEY, autoSyncEnabled ? '1' : '0');
+      applyAutoSyncToggle();
+      if (autoSyncEnabled) {
+        startAutoSync();
+        toast('⏱️ Auto-Sync ON — uploads every 2 minutes while app is open');
+      } else {
+        stopAutoSync();
+        toast('⏱️ Auto-Sync OFF');
+      }
+      // Close dropdown
+      const dd = document.getElementById('gallery-menu-dropdown');
+      const mb = document.getElementById('gallery-menu-btn');
+      if (dd) dd.classList.remove('open');
+      if (mb) mb.classList.remove('menu-open');
+    });
+  }
+
+  // Resume auto-sync if it was on before
+  if (autoSyncEnabled) startAutoSync();
   if (els.dskActionDrive) els.dskActionDrive.addEventListener('click', syncFolderToDrive);
   updateDriveStatusUI();
 
