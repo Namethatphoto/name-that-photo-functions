@@ -214,6 +214,7 @@
     tabGallery: document.getElementById('tab-gallery'),
     grid: document.getElementById('grid'),
     emptyState: document.getElementById('empty-state'),
+    buildingFilterBar: document.getElementById('building-filter-bar'),
     gallerySearch: document.getElementById('gallery-search'),
     gallerySearchMic: document.getElementById('gallery-search-mic'),
     exportBtn: document.getElementById('export-btn'),
@@ -362,6 +363,7 @@
   const CURRENT_FOLDER_KEY = 'photoNamerCurrentFolder';
   let folderSearchQuery = ''; // lowercase filter typed into the properties modal search box
   let gallerySearchQuery = ''; // lowercase filter typed into the gallery's photo-name search box
+  let activeBuildingFilter = null; // null = show all; string = show only that building
 
   // Multi-building support (task #141) — buildings are scoped per project/folder, not
   // per-photo like category/subLocation: unlike those, a building must persist across
@@ -397,6 +399,76 @@
     if (!els.buildingReadout) return;
     els.buildingReadout.textContent = currentBuilding || '';
     els.buildingReadout.classList.toggle('hidden', !currentBuilding);
+  }
+
+  // Building filter/assign bar — rendered above the gallery search box whenever the
+  // current project has at least one named building. Dual-purpose:
+  //   • No selection active: tapping a pill filters the gallery to that building only.
+  //     Tapping "All" clears the filter. Active pill turns blue.
+  //   • Select mode active (photos checked): tapping a pill immediately assigns all
+  //     selected photos to that building and exits select mode. Pills turn green-bordered
+  //     ("assign-ready") to signal the different action.
+  function renderBuildingFilterBar() {
+    const bar = els.buildingFilterBar;
+    bar.innerHTML = '';
+    if (!projectBuildings.length) {
+      bar.classList.remove('visible');
+      return;
+    }
+    bar.classList.add('visible');
+
+    const makeAssignReady = () => {
+      bar.querySelectorAll('.bldg-pill').forEach((p) => {
+        p.classList.toggle('assign-ready', selectMode && selectedIds.size > 0);
+        p.classList.toggle('active', !selectMode && p.dataset.building === (activeBuildingFilter || ''));
+      });
+    };
+
+    // "All" pill
+    const allPill = document.createElement('button');
+    allPill.className = 'bldg-pill' + (!activeBuildingFilter && !selectMode ? ' active' : '');
+    allPill.dataset.building = '';
+    allPill.textContent = 'All';
+    allPill.addEventListener('click', () => {
+      if (selectMode && selectedIds.size > 0) return; // "All" is not an assign target
+      activeBuildingFilter = null;
+      renderBuildingFilterBar();
+      refreshGallery();
+    });
+    bar.appendChild(allPill);
+
+    projectBuildings.forEach((b) => {
+      const pill = document.createElement('button');
+      pill.className = 'bldg-pill' + (!selectMode && b === activeBuildingFilter ? ' active' : '');
+      if (selectMode && selectedIds.size > 0) pill.classList.add('assign-ready');
+      pill.dataset.building = b;
+      pill.textContent = b;
+      pill.addEventListener('click', async () => {
+        if (selectMode && selectedIds.size > 0) {
+          // Assign mode — bulk-assign selected photos to this building
+          const records = await dbGetAll();
+          const targetSet = new Set(selectedIds);
+          const matches = records.filter((r) => targetSet.has(r.id));
+          for (const rec of matches) {
+            rec.building = b;
+            await dbAdd(rec);
+          }
+          const count = matches.length;
+          toast(`${count} photo${count === 1 ? '' : 's'} assigned to ${b}`);
+          selectedIds.clear();
+          selectMode = false;
+          els.selectBtn.classList.remove('active');
+          renderBuildingFilterBar();
+          refreshGallery();
+        } else {
+          // Filter mode
+          activeBuildingFilter = b;
+          renderBuildingFilterBar();
+          refreshGallery();
+        }
+      });
+      bar.appendChild(pill);
+    });
   }
 
   // Buildings modal — replaced the original prompt()-based menu (task #141 follow-up)
@@ -468,6 +540,7 @@
     currentBuilding = typed;
     saveBuildingState(currentFolderId);
     updateBuildingReadout();
+    renderBuildingFilterBar();
     toast(`Building: ${currentBuilding}`);
     closeBuildingsModal();
   }
@@ -502,6 +575,7 @@
     updateFolderChip();
     loadBuildingState(currentFolderId);
     updateBuildingReadout();
+    renderBuildingFilterBar();
   }
 
   const HAS_CREATED_PROJECT_KEY = 'pn_has_created_project';
@@ -965,8 +1039,10 @@
     currentFolderName = name;
     localStorage.setItem(CURRENT_FOLDER_KEY, folderId);
     updateFolderChip();
+    activeBuildingFilter = null;
     loadBuildingState(currentFolderId);
     updateBuildingReadout();
+    renderBuildingFilterBar();
 
     selectMode = false;
     selectedIds.clear();
@@ -2715,9 +2791,12 @@
     // Reorder drags re-derive each photo's order from DOM position, so filtering
     // the grid mid-reorder would scramble the hidden, non-matching photos. Search
     // is ignored (and disabled) while reorder mode is active.
-    const records = (!reorderMode && gallerySearchQuery)
+    let records = (!reorderMode && gallerySearchQuery)
       ? allRecords.filter((r) => r.name.toLowerCase().includes(gallerySearchQuery))
       : allRecords;
+    if (!reorderMode && activeBuildingFilter) {
+      records = records.filter((r) => r.building === activeBuildingFilter);
+    }
     els.grid.innerHTML = '';
     if (!allRecords.length) {
       els.emptyState.textContent = 'No photos yet. Take some on the Camera tab.';
@@ -2961,6 +3040,13 @@
     els.bulkCrop.disabled = !singleIsPhoto;
     const allSelected = galleryIds.length > 0 && n === galleryIds.length;
     els.selectAllBtn.textContent = allSelected ? 'Deselect all' : 'Select all';
+    // Flip building pills to green "assign-ready" mode whenever photos are selected
+    els.buildingFilterBar.querySelectorAll('.bldg-pill:not([data-building=""])').forEach((p) => {
+      p.classList.toggle('assign-ready', n > 0);
+      p.classList.toggle('active', n === 0 && p.dataset.building === (activeBuildingFilter || ''));
+    });
+    const allPill = els.buildingFilterBar.querySelector('.bldg-pill[data-building=""]');
+    if (allPill) allPill.classList.toggle('active', n === 0 && !activeBuildingFilter);
   }
 
   els.bulkRename.addEventListener('click', async () => {
@@ -3282,6 +3368,7 @@
     if (!projectBuildings.includes(typed)) {
       projectBuildings.push(typed);
       saveBuildingState(currentFolderId);
+      renderBuildingFilterBar();
     }
     await assignToBuilding(typed);
   });
