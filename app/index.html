@@ -697,6 +697,11 @@
   #move-building-help { margin:0 0 16px; font-size:12px; color:#999; line-height:1.4; }
   #move-building-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:40vh; overflow-y:auto; }
   #move-building-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; line-height:1.5; }
+  #move-building-new { display:flex; gap:8px; align-items:center; margin-top:14px; padding-top:14px; border-top:1px solid #333; }
+  #move-building-new-input { flex:1; background:#2a2a2c; border:1px solid #444; border-radius:8px; color:#fff; font-size:14px; padding:9px 12px; }
+  #move-building-new-input::placeholder { color:#666; }
+  #move-building-new-mic { background:#2a2a2c; border:1px solid #444; border-radius:8px; color:#fff; font-size:16px; padding:9px 10px; flex-shrink:0; }
+  #move-building-new-add { background:#0a84ff; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; padding:9px 14px; flex-shrink:0; white-space:nowrap; }
   #move-building-actions { display:flex; gap:10px; margin-top:16px; }
   #move-building-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
   #move-building-cancel { background:#3a3a3c; color:#fff; }
@@ -1241,8 +1246,13 @@
 <div id="move-building-modal">
   <div id="move-building-card">
     <h3 id="move-building-title">Move to Building</h3>
-    <p id="move-building-help">Tap a building to move the selected photo(s) there. This only changes which building it's tagged under — nothing else about the photo changes.</p>
+    <p id="move-building-help">Tap a building to assign the selected photo(s), or add a new building below.</p>
     <div id="move-building-list"></div>
+    <div id="move-building-new">
+      <input id="move-building-new-input" type="text" placeholder="New building name…" autocomplete="off" />
+      <button id="move-building-new-mic" title="Speak building name">🎙️</button>
+      <button id="move-building-new-add">Add &amp; Assign</button>
+    </div>
     <div id="move-building-actions">
       <button id="move-building-cancel">Cancel</button>
     </div>

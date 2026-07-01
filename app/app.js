@@ -265,6 +265,9 @@
     moveBuildingTitle: document.getElementById('move-building-title'),
     moveBuildingList: document.getElementById('move-building-list'),
     moveBuildingCancel: document.getElementById('move-building-cancel'),
+    moveBuildingNewInput: document.getElementById('move-building-new-input'),
+    moveBuildingNewMic: document.getElementById('move-building-new-mic'),
+    moveBuildingNewAdd: document.getElementById('move-building-new-add'),
     moveProjectModal: document.getElementById('move-project-modal'),
     moveProjectTitle: document.getElementById('move-project-title'),
     moveProjectList: document.getElementById('move-project-list'),
@@ -3212,12 +3215,26 @@
      exactly like recatTargetIds does for categorize. */
   let moveBuildingTargetIds = [];
 
+  async function assignToBuilding(buildingName) {
+    if (!moveBuildingTargetIds.length) return;
+    const records = await dbGetAll();
+    const targetSet = new Set(moveBuildingTargetIds);
+    const matches = records.filter((r) => targetSet.has(r.id));
+    for (const rec of matches) {
+      if (buildingName) rec.building = buildingName; else delete rec.building;
+      await dbAdd(rec);
+    }
+    closeMoveBuildingModal();
+    toast(buildingName ? `Assigned to ${buildingName}` : 'Building removed');
+    refreshGallery();
+  }
+
   function renderMoveBuildingList() {
     els.moveBuildingList.innerHTML = '';
     if (!projectBuildings.length) {
       const empty = document.createElement('div');
       empty.id = 'move-building-empty';
-      empty.textContent = 'No buildings exist yet for this project. Tap the building icon (🏢) on the camera screen to add one first.';
+      empty.textContent = 'No buildings yet — add one using the field below.';
       els.moveBuildingList.appendChild(empty);
       return;
     }
@@ -3229,26 +3246,15 @@
       name.className = 'building-row-name';
       name.textContent = b || 'No Building';
       row.appendChild(name);
-      row.addEventListener('click', async () => {
-        if (!moveBuildingTargetIds.length) return;
-        const records = await dbGetAll();
-        const targetSet = new Set(moveBuildingTargetIds);
-        const matches = records.filter((r) => targetSet.has(r.id));
-        for (const rec of matches) {
-          if (b) rec.building = b; else delete rec.building;
-          await dbAdd(rec);
-        }
-        closeMoveBuildingModal();
-        toast(b ? `Moved to ${b}` : 'Building removed');
-        refreshGallery();
-      });
+      row.addEventListener('click', () => assignToBuilding(b));
       els.moveBuildingList.appendChild(row);
     });
   }
 
   function openMoveBuilding(rec) {
     moveBuildingTargetIds = [rec.id];
-    els.moveBuildingTitle.textContent = 'Move to Building';
+    els.moveBuildingTitle.textContent = 'Assign Building';
+    els.moveBuildingNewInput.value = '';
     renderMoveBuildingList();
     els.moveBuildingModal.classList.add('active');
   }
@@ -3256,7 +3262,8 @@
   // Bulk path: one save target list, shared title shows the count being moved.
   function openMoveBuildingBulk(ids) {
     moveBuildingTargetIds = ids;
-    els.moveBuildingTitle.textContent = `Move ${ids.length} photo${ids.length === 1 ? '' : 's'} to Building`;
+    els.moveBuildingTitle.textContent = `Assign Building — ${ids.length} photo${ids.length === 1 ? '' : 's'}`;
+    els.moveBuildingNewInput.value = '';
     renderMoveBuildingList();
     els.moveBuildingModal.classList.add('active');
   }
@@ -3264,9 +3271,26 @@
   function closeMoveBuildingModal() {
     els.moveBuildingModal.classList.remove('active');
     moveBuildingTargetIds = [];
+    els.moveBuildingNewInput.value = '';
   }
 
   els.moveBuildingCancel.addEventListener('click', closeMoveBuildingModal);
+
+  els.moveBuildingNewAdd.addEventListener('click', async () => {
+    const typed = els.moveBuildingNewInput.value.trim();
+    if (!typed) { els.moveBuildingNewInput.focus(); return; }
+    if (!projectBuildings.includes(typed)) {
+      projectBuildings.push(typed);
+      saveBuildingState(currentFolderId);
+    }
+    await assignToBuilding(typed);
+  });
+
+  els.moveBuildingNewInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') els.moveBuildingNewAdd.click();
+  });
+
+  attachDictation(els.moveBuildingNewMic, els.moveBuildingNewInput);
 
   /* ---------------- Move to Project modal ----------------
      Sibling of the Move to Building modal above, but for rec.folderId — corrects a photo
