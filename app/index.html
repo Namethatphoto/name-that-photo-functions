@@ -574,7 +574,7 @@
     padding:8px 6px 10px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
   #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
   /* ── Gallery action menu ── */
-  #gallery-search { width:20ch; background:#0a84ff; border:1px solid #0055d4;
+  #gallery-search { width:18ch; background:#0a84ff; border:1px solid #0055d4;
     color:#fff; padding:7px 9px; border-radius:10px; font-size:13px; font-family:inherit;
     display:block; }
   #gallery-search::placeholder { color:rgba(255,255,255,.7); }
@@ -596,6 +596,12 @@
   #gallery-menu-dropdown > button:disabled,
   #gallery-menu-dropdown .export-btn-wrap #export-btn:disabled { background:#2c2c2e; color:#666; }
   #gallery-menu-dropdown #reorder-btn.active { background:#fff; color:#0a84ff; }
+  #auto-sync-interval-row { display:flex; gap:4px; padding:2px 0 4px; }
+  .sync-interval-btn { flex:1; padding:5px 0; font-size:11px; font-weight:600;
+    border-radius:8px; background:#2c2c2e; color:#aaa; border:1px solid #444;
+    cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none;
+    text-align:center; }
+  .sync-interval-btn.selected { background:#0a84ff; color:#fff; border-color:#0a84ff; }
   #select-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
     padding:8px 13px; font-size:13px; font-weight:600; white-space:nowrap;
     font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
@@ -949,6 +955,11 @@
           <button id="backup-btn" disabled>📱 Backup to Phone</button>
           <button id="drive-sync-btn" disabled>☁️ Send to Cloud</button>
           <button id="auto-sync-btn">⏱️ Auto-Sync: Off</button>
+          <div id="auto-sync-interval-row">
+            <button class="sync-interval-btn" data-min="1">1 min</button>
+            <button class="sync-interval-btn" data-min="2">2 min</button>
+            <button class="sync-interval-btn" data-min="3">3 min</button>
+          </div>
           <button id="drive-pull-btn">⬇️ Pull from Cloud</button>
           <button id="drive-link-btn">🔗 Send Link</button>
           <div class="export-btn-wrap">
@@ -963,8 +974,8 @@
           <button id="account-btn">👤 Account</button>
         </div>
       </div>
+    <button id="select-btn">☑️ Select</button>
     </div>
-    <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
     <div id="building-filter-bar"></div>
   </div>
 
@@ -980,7 +991,7 @@
   <!-- Top-right: exit app + select -->
   <div id="top-right-group">
     <button id="exit-app" title="Exit app">Exit App</button>
-    <button id="select-btn">☑️ Select</button>
+    <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
   </div>
 
   <div id="camera-view">

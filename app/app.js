@@ -342,10 +342,12 @@
   let lastFrameSignature = null; // detects a frozen camera feed (see capturePhoto)
   const SILENT_MODE_KEY = 'pn_silent_mode';
   const AUTO_SYNC_KEY = 'pn_auto_sync';
-  const AUTO_SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+  const AUTO_SYNC_INTERVAL_KEY = 'pn_auto_sync_interval';
   let silentMode = localStorage.getItem(SILENT_MODE_KEY) === '1';
   let silentPhotoCount = 0;
   let autoSyncEnabled = localStorage.getItem(AUTO_SYNC_KEY) === '1';
+  let autoSyncIntervalMin = parseInt(localStorage.getItem(AUTO_SYNC_INTERVAL_KEY) || '2', 10);
+  if (![1, 2, 3].includes(autoSyncIntervalMin)) autoSyncIntervalMin = 2;
   let autoSyncTimer = null;
   let autoSyncRunning = false; // session counter for auto-named photos
   let pendingBlob = null;     // photo awaiting a name
@@ -787,8 +789,17 @@
           const allRecords = await getFolderPhotos(currentFolderId);
           await syncMetadataToDrive(projectFolderId, allRecords, token);
         } catch (_) { /* non-critical — photos are already synced */ }
-        toast(`☁️ Auto-synced ${synced} photo${synced === 1 ? '' : 's'} to Drive`);
-        refreshGallery();
+        // Update cloud badges in-place rather than calling refreshGallery() — a full
+        // re-render resets the inspector's scroll position mid-gallery, which is
+        // disruptive during an active inspection. Just flip the badge on each synced
+        // thumb without touching the rest of the DOM.
+        for (const rec of pending.slice(0, synced)) {
+          const badge = els.grid.querySelector(`[data-id="${rec.id}"] .cloud-badge`);
+          if (badge) {
+            badge.className = 'cloud-badge';
+            badge.title = 'Saved to Cloud';
+          }
+        }
       }
     } catch (e) { /* silent — try again next interval */ }
     finally { autoSyncRunning = false; }
@@ -797,15 +808,21 @@
   function applyAutoSyncToggle() {
     const btn = document.getElementById('auto-sync-btn');
     if (!btn) return;
-    btn.textContent = autoSyncEnabled ? '⏱️ Auto-Sync: On' : '⏱️ Auto-Sync: Off';
+    btn.textContent = autoSyncEnabled
+      ? `⏱️ Auto-Sync: On (${autoSyncIntervalMin} min)`
+      : '⏱️ Auto-Sync: Off';
     btn.style.background = autoSyncEnabled ? '#30d158' : '';
     btn.style.borderColor = autoSyncEnabled ? '#30d158' : '';
+    // Highlight whichever interval button matches the current setting
+    document.querySelectorAll('.sync-interval-btn').forEach((b) => {
+      b.classList.toggle('selected', parseInt(b.dataset.min, 10) === autoSyncIntervalMin);
+    });
   }
 
   function startAutoSync() {
     if (autoSyncTimer) clearInterval(autoSyncTimer);
     autoSyncToDrive(); // run immediately on enable
-    autoSyncTimer = setInterval(autoSyncToDrive, AUTO_SYNC_INTERVAL_MS);
+    autoSyncTimer = setInterval(autoSyncToDrive, autoSyncIntervalMin * 60 * 1000);
   }
 
   function stopAutoSync() {
@@ -914,7 +931,7 @@
       applyAutoSyncToggle();
       if (autoSyncEnabled) {
         startAutoSync();
-        toast('⏱️ Auto-Sync ON — uploads every 2 minutes while app is open');
+        toast(`⏱️ Auto-Sync ON — uploads every ${autoSyncIntervalMin} minute${autoSyncIntervalMin === 1 ? '' : 's'} while app is open`);
       } else {
         stopAutoSync();
         toast('⏱️ Auto-Sync OFF');
@@ -926,6 +943,20 @@
       if (mb) mb.classList.remove('menu-open');
     });
   }
+
+  // Auto-sync interval picker
+  document.querySelectorAll('.sync-interval-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // keep dropdown open
+      autoSyncIntervalMin = parseInt(btn.dataset.min, 10);
+      localStorage.setItem(AUTO_SYNC_INTERVAL_KEY, String(autoSyncIntervalMin));
+      applyAutoSyncToggle();
+      if (autoSyncEnabled) {
+        startAutoSync(); // restart timer with new interval
+        toast(`⏱️ Auto-Sync interval changed to ${autoSyncIntervalMin} min`);
+      }
+    });
+  });
 
   // Resume auto-sync if it was on before
   if (autoSyncEnabled) startAutoSync();
