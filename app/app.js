@@ -789,16 +789,22 @@
           const allRecords = await getFolderPhotos(currentFolderId);
           await syncMetadataToDrive(projectFolderId, allRecords, token);
         } catch (_) { /* non-critical — photos are already synced */ }
-        // Update cloud badges in-place rather than calling refreshGallery() — a full
-        // re-render resets the inspector's scroll position mid-gallery, which is
-        // disruptive during an active inspection. Just flip the badge on each synced
-        // thumb without touching the rest of the DOM.
-        for (const rec of pending.slice(0, synced)) {
-          const badge = els.grid.querySelector(`[data-id="${rec.id}"] .cloud-badge`);
-          if (badge) {
-            badge.className = 'cloud-badge';
-            badge.title = 'Saved to Cloud';
+        toast(`☁️ Auto-synced ${synced} photo${synced === 1 ? '' : 's'} to Drive`);
+        // Flip cloud badges in-place so the inspector's scroll position is preserved.
+        // If the grid hasn't been rendered yet (user is on the camera view), fall back
+        // to a full refreshGallery() so the badges are correct when they next open the gallery.
+        const syncedRecs = pending.slice(0, synced);
+        const gridHasThumbs = els.grid && els.grid.querySelector('.thumb');
+        if (gridHasThumbs) {
+          for (const rec of syncedRecs) {
+            const badge = els.grid.querySelector(`[data-id="${rec.id}"] .cloud-badge`);
+            if (badge) {
+              badge.className = 'cloud-badge';
+              badge.title = 'Saved to Cloud';
+            }
           }
+        } else {
+          refreshGallery();
         }
       }
     } catch (e) { /* silent — try again next interval */ }
