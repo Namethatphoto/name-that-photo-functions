@@ -1019,13 +1019,16 @@
   if (els.driveLinkBtn) els.driveLinkBtn.addEventListener('click', sendProjectDriveLink);
 
   function updateFolderChip() {
-    if (els.projectBannerName) els.projectBannerName.textContent = currentFolderName || 'Select project';
+    const hasCreated = localStorage.getItem(HAS_CREATED_PROJECT_KEY) === '1';
+    if (els.projectBannerLabel) {
+      els.projectBannerLabel.textContent = hasCreated ? 'Current Project' : 'Create Project';
+    }
+    if (els.projectBannerName) {
+      els.projectBannerName.textContent = hasCreated ? (currentFolderName || 'My Inspection') : 'My Inspection';
+    }
+    // Open in create-focused mode before any project exists; switch mode after
     if (els.projectBanner) {
-      // Never show the pill for the bootstrap default project — only once the user has
-      // actually created one of their own via "Create New Project".
-      const hasCreated = localStorage.getItem(HAS_CREATED_PROJECT_KEY) === '1';
-      // Select Existing Project shows/hides alongside the current-project pill — both
-      // are meaningless until a real project exists to switch away from.
+      els.projectBanner.onclick = () => openFoldersModal(!hasCreated);
     }
   }
 
@@ -1177,14 +1180,17 @@
   // focusNewProject: true opens the modal with focus straight on the "Create New Project"
   // input (used by the Create New Project pill), instead of the search field (default).
   function openFoldersModal(focusNewProject) {
-    els.newFolderInput.value = '';
+    const hasCreatedNow = localStorage.getItem(HAS_CREATED_PROJECT_KEY) === '1';
+    els.newFolderInput.value = !hasCreatedNow ? 'My Inspection' : '';
     els.foldersSearch.value = '';
     folderSearchQuery = '';
     renderFoldersList();
     els.foldersModal.classList.add('active');
     setTimeout(() => {
-      if (focusNewProject) els.newFolderInput.focus();
-      else els.foldersSearch.focus();
+      if (focusNewProject) {
+        els.newFolderInput.focus();
+        els.newFolderInput.select();
+      } else els.foldersSearch.focus();
     }, 50);
   }
 
