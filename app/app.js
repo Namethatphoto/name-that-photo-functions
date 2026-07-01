@@ -2861,6 +2861,19 @@
   function showCameraStartPrompt() {
     els.cameraStartName.textContent = currentFolderName || 'Project';
     hideProjectGate();
+    // Reflect current auto-sync state on the Enable Auto-Save button
+    const asBtn = document.getElementById('camera-start-autosave');
+    if (asBtn) {
+      if (autoSyncEnabled) {
+        asBtn.textContent = '☁️ Auto-Save: ON';
+        asBtn.classList.add('autosave-on');
+        asBtn.disabled = true;
+      } else {
+        asBtn.textContent = '☁️ Enable Auto-Save';
+        asBtn.classList.remove('autosave-on');
+        asBtn.disabled = false;
+      }
+    }
     els.cameraStartPrompt.classList.remove('hidden');
   }
   function hideCameraStartPrompt() {
@@ -2912,6 +2925,26 @@
     hideCameraStartPrompt();
     openPdfOptionsForProject();
   });
+  const cameraStartAutosave = document.getElementById('camera-start-autosave');
+  if (cameraStartAutosave) {
+    cameraStartAutosave.addEventListener('click', async () => {
+      // Get an interactive Drive token using this tap gesture (required on iOS)
+      const token = await getDriveAccessToken({ interactive: true });
+      if (!token) {
+        toast('Auto-Save requires Google Drive sign-in');
+        return;
+      }
+      autoSyncEnabled = true;
+      localStorage.setItem(AUTO_SYNC_KEY, '1');
+      applyAutoSyncToggle();
+      startAutoSync(); // token is cached — will succeed immediately
+      // Update button in place so user sees confirmation without closing the prompt
+      cameraStartAutosave.textContent = '☁️ Auto-Save: ON';
+      cameraStartAutosave.classList.add('autosave-on');
+      cameraStartAutosave.disabled = true;
+      toast(`☁️ Auto-Save ON — photos upload every ${autoSyncIntervalMin} min while you work`);
+    });
+  }
   els.dskPromptSkip.addEventListener('click', () => {
     els.dskPromptModal.classList.remove('active');
   });

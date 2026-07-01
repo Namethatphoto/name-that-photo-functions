@@ -242,6 +242,8 @@
     -webkit-appearance:none; appearance:none; box-shadow:0 4px 16px rgba(10,132,255,.35); }
   #camera-start-pdf { background:rgba(255,255,255,.08) !important; box-shadow:none !important;
     border:1px solid rgba(255,255,255,.18) !important; }
+  #camera-start-autosave.autosave-on { background:#30d158 !important;
+    box-shadow:0 4px 16px rgba(48,209,88,.35) !important; }
   #camera-start-sub { font-size:12px; color:#97a1ab; max-width:260px; line-height:1.4; }
 
   /* Property summary card — context for which property is active without opening
@@ -1018,6 +1020,7 @@
       <div id="camera-start-text">Project ready: <span id="camera-start-project-name">Project</span></div>
       <div id="camera-start-actions">
         <button id="camera-start-go">📷 Start Camera</button>
+        <button id="camera-start-autosave">☁️ Enable Auto-Save</button>
         <button id="camera-start-pdf">📄 Add Customer Info Now</button>
       </div>
       <div id="camera-start-sub">Customer/claim info is optional here — add it now or later from the PDF report screen.</div>
