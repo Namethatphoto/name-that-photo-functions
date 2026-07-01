@@ -158,6 +158,7 @@
     buildingToggle: document.getElementById('building-toggle'),
     silentToggle: document.getElementById('silent-toggle'),
     galleryBuildingBtn: document.getElementById('gallery-building-btn'),
+    desktopImportMenuBtn: document.getElementById('desktop-import-menu-btn'),
     photoCount: document.getElementById('photo-count'),
     buildingReadout: document.getElementById('building-readout'),
     liveToggle: document.getElementById('live-toggle'),
@@ -418,10 +419,7 @@
     const hasBuildings = projectBuildings.length > 0;
     const assignMode = selectMode && selectedIds.size > 0;
 
-    if (els.galleryBuildingBtn) {
-      if (hasBuildings) els.galleryBuildingBtn.classList.add('visible');
-      else els.galleryBuildingBtn.classList.remove('visible');
-    }
+
     if (hasBuildings) {
       // "All" pill — filter only, not an assign target
       const allPill = document.createElement('button');
@@ -2269,6 +2267,17 @@
     els.photoPicker.value = '';
     els.photoPicker.click();
   });
+  if (els.desktopImportMenuBtn) {
+    els.desktopImportMenuBtn.addEventListener('click', () => {
+      // Close dropdown first
+      const dd = document.getElementById('gallery-menu-dropdown');
+      const mb = document.getElementById('gallery-menu-btn');
+      if (dd) dd.classList.remove('open');
+      if (mb) mb.classList.remove('menu-open');
+      els.photoPicker.value = '';
+      els.photoPicker.click();
+    });
+  }
 
   els.photoPicker.addEventListener('change', async () => {
     const files = Array.from(els.photoPicker.files || []);

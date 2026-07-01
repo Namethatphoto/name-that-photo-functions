@@ -392,11 +392,7 @@
   #top-left-group { position:fixed; top:env(safe-area-inset-top, 10px); left:10px;
     z-index:90; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
   #top-left-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
-  #gallery-building-btn { background:#0a84ff; border:2px solid #0a84ff; color:#fff;
-    font-size:16px; width:32px; height:32px; border-radius:50%; cursor:pointer;
-    display:none; align-items:center; justify-content:center; font-family:inherit;
-    -webkit-appearance:none; appearance:none; }
-  #gallery-building-btn.visible { display:flex; }
+
   #building-filter-bar { display:flex; flex-direction:row; gap:5px; overflow-x:auto;
     max-width:calc(100vw - 160px); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   #building-filter-bar:empty { display:none; }
@@ -554,7 +550,9 @@
   #naming-room-row { display:flex; }
   #naming-room-row.hidden { display:none; }
   #naming-room-row select { flex:1; background:#1c1c1e; color:#fff; border:1px solid #3a3a3c;
-    border-radius:8px; padding:9px 10px; font-size:14px; font-weight:600; }
+    border-radius:8px; padding:9px 10px; font-size:14px; font-weight:600;
+    transition:background .2s, border-color .2s; }
+  #naming-room-row select.selected { background:#1a3a22; border-color:#30d158; color:#30d158; }
 
   #naming-controls { display:flex; gap:12px; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
   #naming-controls button { flex:1; padding:14px 0; border-radius:12px; font-size:17px; font-weight:700; border:none; }
@@ -575,7 +573,8 @@
   #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
   /* ── Gallery action menu ── */
   #gallery-search { width:20ch; background:#0a84ff; border:1px solid #0055d4;
-    color:#fff; padding:7px 9px; border-radius:10px; font-size:13px; font-family:inherit; }
+    color:#fff; padding:7px 9px; border-radius:10px; font-size:13px; font-family:inherit;
+    display:block; }
   #gallery-search::placeholder { color:rgba(255,255,255,.7); }
   .gallery-menu-wrap { position:relative; }
   #gallery-menu-btn { background:#0a84ff; color:#fff; border:1px solid #0055d4; border-radius:10px;
@@ -932,8 +931,8 @@
           <button id="pdf-all-btn" disabled>📄 Create Report</button>
           <button id="attach-doc-btn">📎 Attach PDF</button>
           <button id="backup-btn" disabled>📱 Backup to Phone</button>
-          <button id="drive-sync-btn" disabled>☁️ Sync to Drive</button>
-          <button id="drive-pull-btn">⬇️ Pull from Drive</button>
+          <button id="drive-sync-btn" disabled>☁️ Sync to Cloud</button>
+          <button id="drive-pull-btn">⬇️ Pull from Cloud</button>
           <button id="drive-link-btn">🔗 Send Link</button>
           <div class="export-btn-wrap">
             <button id="export-btn" disabled>📦 Export / Zip</button>
@@ -942,12 +941,13 @@
               <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
             </div>
           </div>
+          <button id="gallery-building-btn">🏢 Add Building</button>
+          <button id="desktop-import-menu-btn">🖼️ Choose Photos or<br>PDFs from Desktop</button>
           <button id="account-btn">👤 Account</button>
         </div>
       </div>
-      <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
-      <button id="gallery-building-btn" title="Manage buildings">🏢</button>
     </div>
+    <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
     <div id="building-filter-bar"></div>
   </div>
 
