@@ -2257,7 +2257,7 @@
     });
   }
 
-  els.pickPhoto.addEventListener('click', () => {
+  if (els.pickPhoto) els.pickPhoto.addEventListener('click', () => {
     els.photoPicker.value = '';
     els.photoPicker.click();
   });
