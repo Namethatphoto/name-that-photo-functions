@@ -156,6 +156,7 @@
     pickPhoto: document.getElementById('pick-photo'),
     compassToggle: document.getElementById('compass-toggle'),
     buildingToggle: document.getElementById('building-toggle'),
+    silentToggle: document.getElementById('silent-toggle'),
     galleryBuildingBtn: document.getElementById('gallery-building-btn'),
     photoCount: document.getElementById('photo-count'),
     buildingReadout: document.getElementById('building-readout'),
@@ -337,6 +338,9 @@
   let stream = null;
   let facingMode = 'environment';
   let lastFrameSignature = null; // detects a frozen camera feed (see capturePhoto)
+  const SILENT_MODE_KEY = 'pn_silent_mode';
+  let silentMode = localStorage.getItem(SILENT_MODE_KEY) === '1';
+  let silentPhotoCount = 0; // session counter for auto-named photos
   let pendingBlob = null;     // photo awaiting a name
   let pendingOriginalBlob = null; // pre-markup blob, set only if the pending photo was annotated before save
   let currentTranscript = '';
@@ -1325,6 +1329,28 @@
   }
 
   if (els.buildingToggle) els.buildingToggle.addEventListener('click', openBuildingsModal);
+
+  // Silent mode toggle — disables voice labeling for noisy environments
+  function applySilentToggleState() {
+    if (!els.silentToggle) return;
+    els.silentToggle.classList.toggle('active', silentMode);
+    els.silentToggle.title = silentMode
+      ? 'Silent mode ON — photos auto-saved without voice labeling. Tap to re-enable.'
+      : 'Silent mode OFF — tap to disable voice labeling (useful in noisy environments).';
+    els.silentToggle.textContent = silentMode ? '🔇' : '🎙️';
+  }
+  if (els.silentToggle) {
+    applySilentToggleState();
+    els.silentToggle.addEventListener('click', () => {
+      silentMode = !silentMode;
+      localStorage.setItem(SILENT_MODE_KEY, silentMode ? '1' : '0');
+      silentPhotoCount = 0; // reset counter each time mode switches
+      applySilentToggleState();
+      toast(silentMode
+        ? '🔇 Silent mode ON — photos will auto-save without voice labeling'
+        : '🎙️ Voice labeling re-enabled');
+    });
+  }
   if (els.galleryBuildingBtn) els.galleryBuildingBtn.addEventListener('click', openBuildingsModal);
   if (els.buildingsClose) els.buildingsClose.addEventListener('click', closeBuildingsModal);
   if (els.newBuildingAdd) els.newBuildingAdd.addEventListener('click', addBuildingFromInput);
@@ -2203,8 +2229,29 @@
     if (headingAtCapture != null) {
       stampCompass(ctx, canvas.width, canvas.height, headingAtCapture);
     }
-    canvas.toBlob((blob) => {
-      if (blob) openNaming(blob, false, undefined, undefined, headingAtCapture);
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      if (silentMode) {
+        // Silent mode: skip voice overlay, auto-save immediately
+        silentPhotoCount++;
+        const now = Date.now();
+        const autoName = 'Photo ' + silentPhotoCount;
+        const record = {
+          id: 'p_' + now + '_' + Math.random().toString(36).slice(2, 7),
+          name: autoName,
+          blob,
+          createdAt: now,
+          order: now,
+          folderId: currentFolderId,
+        };
+        if (headingAtCapture != null) record.heading = headingAtCapture;
+        if (currentBuilding) record.building = currentBuilding;
+        await dbAdd(record);
+        toast('Saved: ' + autoName);
+        await refreshGallery();
+      } else {
+        openNaming(blob, false, undefined, undefined, headingAtCapture);
+      }
     }, 'image/jpeg', 0.92);
   }
 

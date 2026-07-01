@@ -151,6 +151,11 @@
     width:44px; height:44px; border-radius:50%; background:#0a84ff; border:2px solid #0a84ff;
     color:#fff; font-size:18px; font-weight:700; }
   #compass-toggle.active { background:#0a84ff; border-color:#0a84ff; }
+  #silent-toggle { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 96px); right:16px;
+    width:44px; height:44px; border-radius:50%; background:#0a84ff; border:2px solid #0a84ff;
+    color:#fff; font-size:18px; font-weight:700; z-index:5; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; }
+  #silent-toggle.active { background:#ff3b30; border-color:#ff3b30; }
   #compass-readout { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 92px); right:16px;
     background:#0a84ff; color:#fff; font-size:13px; font-weight:700; padding:5px 9px;
     border-radius:8px; text-align:center; min-width:54px; text-shadow:0 1px 2px #000; }
@@ -1016,6 +1021,7 @@
     <button id="pick-photo" title="Choose Photos or PDFs from Desktop"><span id="pick-photo-icon">🗄️</span><span id="pick-photo-label">Choose Photos or PDFs from Desktop</span></button>
     <button id="compass-toggle" title="Stamp compass heading on photo">🧭</button>
     <div id="compass-readout" class="hidden"></div>
+    <button id="silent-toggle" title="Toggle silent mode — skip voice naming and auto-save photos">🎙️</button>
     <button id="building-toggle" title="Buildings (multi-building projects)">🏢</button>
     <div id="building-readout" class="hidden"></div>
     <div id="live-controls">
