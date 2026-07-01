@@ -2857,7 +2857,16 @@
       }
       const label = document.createElement('div');
       label.className = 'label';
-      label.textContent = rec.building ? `[${rec.building}] ${rec.name}` : rec.name;
+      // Category chip — only shown for explicitly categorized photos (not 'other'/unset)
+      const catKey = rec.category && ['exterior', 'roof', 'interior'].includes(rec.category) ? rec.category : null;
+      if (catKey) {
+        const chip = document.createElement('span');
+        chip.className = 'cat-chip ' + catKey;
+        chip.textContent = catKey === 'exterior' ? 'EXT' : catKey === 'roof' ? 'ROOF' : 'INT';
+        label.appendChild(chip);
+      }
+      const nameText = document.createTextNode(rec.building ? `[${rec.building}] ${rec.name}` : rec.name);
+      label.appendChild(nameText);
       const selectDot = document.createElement('div');
       selectDot.className = 'select-dot';
       const dragHandle = document.createElement('div');
