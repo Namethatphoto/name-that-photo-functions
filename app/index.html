@@ -472,14 +472,15 @@
   #folders-search-row { margin-bottom:20px; }
   #folders-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
     border-radius:8px; font-size:15px; }
-  #building-filter-bar { display:none; flex-direction:row; gap:8px; overflow-x:auto; padding:0 0 10px;
+  #building-filter-bar { display:flex; flex-direction:row; gap:8px; overflow-x:auto; padding:0 0 10px;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   #building-filter-bar::-webkit-scrollbar { display:none; }
-  #building-filter-bar.visible { display:flex; }
   .bldg-pill { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid #444;
     background:#2a2a2c; color:#aaa; font-size:13px; font-weight:600; white-space:nowrap; }
   .bldg-pill.active { background:#0a84ff; border-color:#0a84ff; color:#fff; }
   .bldg-pill.assign-ready { border-color:#30d158; color:#30d158; }
+  #bldg-create-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px dashed #555;
+    background:transparent; color:#0a84ff; font-size:13px; font-weight:700; white-space:nowrap; }
   #gallery-search-row { margin-bottom:10px; }
   #gallery-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
     border-radius:8px; font-size:15px; }

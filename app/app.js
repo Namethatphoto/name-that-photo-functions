@@ -411,64 +411,59 @@
   function renderBuildingFilterBar() {
     const bar = els.buildingFilterBar;
     bar.innerHTML = '';
-    if (!projectBuildings.length) {
-      bar.classList.remove('visible');
-      return;
-    }
-    bar.classList.add('visible');
+    const hasBuildings = projectBuildings.length > 0;
+    const assignMode = selectMode && selectedIds.size > 0;
 
-    const makeAssignReady = () => {
-      bar.querySelectorAll('.bldg-pill').forEach((p) => {
-        p.classList.toggle('assign-ready', selectMode && selectedIds.size > 0);
-        p.classList.toggle('active', !selectMode && p.dataset.building === (activeBuildingFilter || ''));
+    if (hasBuildings) {
+      // "All" pill — filter only, not an assign target
+      const allPill = document.createElement('button');
+      allPill.className = 'bldg-pill' + (!activeBuildingFilter && !assignMode ? ' active' : '');
+      allPill.dataset.building = '';
+      allPill.textContent = 'All';
+      allPill.addEventListener('click', () => {
+        if (assignMode) return;
+        activeBuildingFilter = null;
+        renderBuildingFilterBar();
+        refreshGallery();
       });
-    };
+      bar.appendChild(allPill);
 
-    // "All" pill
-    const allPill = document.createElement('button');
-    allPill.className = 'bldg-pill' + (!activeBuildingFilter && !selectMode ? ' active' : '');
-    allPill.dataset.building = '';
-    allPill.textContent = 'All';
-    allPill.addEventListener('click', () => {
-      if (selectMode && selectedIds.size > 0) return; // "All" is not an assign target
-      activeBuildingFilter = null;
-      renderBuildingFilterBar();
-      refreshGallery();
-    });
-    bar.appendChild(allPill);
-
-    projectBuildings.forEach((b) => {
-      const pill = document.createElement('button');
-      pill.className = 'bldg-pill' + (!selectMode && b === activeBuildingFilter ? ' active' : '');
-      if (selectMode && selectedIds.size > 0) pill.classList.add('assign-ready');
-      pill.dataset.building = b;
-      pill.textContent = b;
-      pill.addEventListener('click', async () => {
-        if (selectMode && selectedIds.size > 0) {
-          // Assign mode — bulk-assign selected photos to this building
-          const records = await dbGetAll();
-          const targetSet = new Set(selectedIds);
-          const matches = records.filter((r) => targetSet.has(r.id));
-          for (const rec of matches) {
-            rec.building = b;
-            await dbAdd(rec);
+      projectBuildings.forEach((b) => {
+        const pill = document.createElement('button');
+        pill.className = 'bldg-pill' + (!assignMode && b === activeBuildingFilter ? ' active' : '');
+        if (assignMode) pill.classList.add('assign-ready');
+        pill.dataset.building = b;
+        pill.textContent = b;
+        pill.addEventListener('click', async () => {
+          if (assignMode) {
+            const records = await dbGetAll();
+            const targetSet = new Set(selectedIds);
+            const matches = records.filter((r) => targetSet.has(r.id));
+            for (const rec of matches) { rec.building = b; await dbAdd(rec); }
+            const count = matches.length;
+            toast(`${count} photo${count === 1 ? '' : 's'} assigned to ${b}`);
+            selectedIds.clear();
+            selectMode = false;
+            els.selectBtn.classList.remove('active');
+            renderBuildingFilterBar();
+            refreshGallery();
+          } else {
+            activeBuildingFilter = b;
+            renderBuildingFilterBar();
+            refreshGallery();
           }
-          const count = matches.length;
-          toast(`${count} photo${count === 1 ? '' : 's'} assigned to ${b}`);
-          selectedIds.clear();
-          selectMode = false;
-          els.selectBtn.classList.remove('active');
-          renderBuildingFilterBar();
-          refreshGallery();
-        } else {
-          // Filter mode
-          activeBuildingFilter = b;
-          renderBuildingFilterBar();
-          refreshGallery();
-        }
+        });
+        bar.appendChild(pill);
       });
-      bar.appendChild(pill);
-    });
+    }
+
+    // "+ Create Building" button — always present so users can create buildings
+    // directly from the gallery without switching to the camera tab.
+    const createBtn = document.createElement('button');
+    createBtn.id = 'bldg-create-btn';
+    createBtn.textContent = '+ Create Building';
+    createBtn.addEventListener('click', () => openBuildingsModal());
+    bar.appendChild(createBtn);
   }
 
   // Buildings modal — replaced the original prompt()-based menu (task #141 follow-up)
@@ -3041,12 +3036,15 @@
     const allSelected = galleryIds.length > 0 && n === galleryIds.length;
     els.selectAllBtn.textContent = allSelected ? 'Deselect all' : 'Select all';
     // Flip building pills to green "assign-ready" mode whenever photos are selected
-    els.buildingFilterBar.querySelectorAll('.bldg-pill:not([data-building=""])').forEach((p) => {
-      p.classList.toggle('assign-ready', n > 0);
-      p.classList.toggle('active', n === 0 && p.dataset.building === (activeBuildingFilter || ''));
+    els.buildingFilterBar.querySelectorAll('.bldg-pill').forEach((p) => {
+      if (p.dataset.building === '') {
+        // "All" pill — never assign-ready
+        p.classList.toggle('active', n === 0 && !activeBuildingFilter);
+      } else {
+        p.classList.toggle('assign-ready', n > 0);
+        p.classList.toggle('active', n === 0 && p.dataset.building === (activeBuildingFilter || ''));
+      }
     });
-    const allPill = els.buildingFilterBar.querySelector('.bldg-pill[data-building=""]');
-    if (allPill) allPill.classList.toggle('active', n === 0 && !activeBuildingFilter);
   }
 
   els.bulkRename.addEventListener('click', async () => {
