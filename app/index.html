@@ -434,9 +434,7 @@
   .bldg-pill.assign-ready { border-color:#30d158; color:#30d158; }
   #bldg-create-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px dashed #555;
     background:transparent; color:#0a84ff; font-size:13px; font-weight:700; white-space:nowrap; }
-  #gallery-search-row { margin-bottom:10px; }
-  #gallery-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
-    border-radius:8px; font-size:15px; }
+
   #folders-card .pdf-label { margin:0 0 8px; }
   #folders-card .pdf-field-row { margin-bottom:20px; }
   #folders-list { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; max-height:34vh; overflow-y:auto; }
@@ -556,8 +554,12 @@
     padding:8px 6px 10px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
   #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
   /* ── Gallery action menu ── */
-  .gallery-menu-wrap { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
-    transform:translateX(-50%); z-index:89; }
+  #gallery-top-center { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
+    transform:translateX(-50%); z-index:89; display:flex; align-items:center; gap:6px; }
+  #gallery-top-center #gallery-search { width:25ch; background:#1c1c1e; border:1px solid #444;
+    color:#fff; padding:8px 10px; border-radius:10px; font-size:13px; font-family:inherit; }
+  #gallery-top-center #gallery-search::placeholder { color:#888; }
+  .gallery-menu-wrap { position:relative; }
   #gallery-menu-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
     padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
     -webkit-appearance:none; appearance:none; white-space:nowrap; }
@@ -915,26 +917,29 @@
     </div>
   </div>
 
-  <!-- Fixed top-center gallery menu -->
-  <div class="gallery-menu-wrap">
-    <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
-    <div id="gallery-menu-dropdown">
-      <button id="select-btn">Select</button>
-      <button id="reorder-btn">Reorder</button>
-      <button id="pdf-all-btn" disabled>Create Report</button>
-      <button id="attach-doc-btn">Attach PDF</button>
-      <button id="backup-btn" disabled>Backup to Phone</button>
-      <button id="drive-sync-btn" disabled>Sync to Drive</button>
-      <button id="drive-pull-btn">Pull from Drive</button>
-      <button id="drive-link-btn">Send Link</button>
-      <div class="export-btn-wrap">
-        <button id="export-btn" disabled>Export / Zip</button>
-        <div id="export-quality-menu">
-          <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
-          <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+  <!-- Fixed top-center: search + gallery menu -->
+  <div id="gallery-top-center">
+    <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
+    <div class="gallery-menu-wrap">
+      <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
+      <div id="gallery-menu-dropdown">
+        <button id="select-btn">Select</button>
+        <button id="reorder-btn">Reorder</button>
+        <button id="pdf-all-btn" disabled>Create Report</button>
+        <button id="attach-doc-btn">Attach PDF</button>
+        <button id="backup-btn" disabled>Backup to Phone</button>
+        <button id="drive-sync-btn" disabled>Sync to Drive</button>
+        <button id="drive-pull-btn">Pull from Drive</button>
+        <button id="drive-link-btn">Send Link</button>
+        <div class="export-btn-wrap">
+          <button id="export-btn" disabled>Export / Zip</button>
+          <div id="export-quality-menu">
+            <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
+            <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+          </div>
         </div>
+        <button id="account-btn">Account</button>
       </div>
-      <button id="account-btn">Account</button>
     </div>
   </div>
 
@@ -1087,10 +1092,7 @@
       <div id="gallery-header-actions"></div>
     </div>
     <div id="building-filter-bar"></div>
-    <div id="gallery-search-row" class="pdf-field-row">
-      <input id="gallery-search" type="text" placeholder="Search photo names…" autocapitalize="words">
-      <button id="gallery-search-mic" class="mic-btn" title="Speak">🎤</button>
-    </div>
+
     <div id="bulk-bar">
       <div id="bulk-count">0 selected</div>
       <div id="bulk-bar-actions">
