@@ -846,12 +846,9 @@
   #detail-pdf-open { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:10px 18px;
     font-size:14px; font-weight:600; }
   #detail-actions { display:flex; flex-wrap:wrap; gap:10px; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); }
-  #detail-actions button { flex:1; min-width:130px; padding:13px 0; border-radius:12px; font-size:14px; font-weight:600; border:none; }
-  #detail-annotate { background:#2a2a2a; color:#fff; }
-  #detail-crop { background:#2a2a2a; color:#fff; }
+  #detail-actions button { flex:1; min-width:130px; padding:13px 0; border-radius:12px; font-size:14px; font-weight:600; border:none; background:#0a84ff; color:#fff; }
   #detail-remove-markup { background:#3a2a14; color:#ff9f0a; }
   #detail-remove-markup.hidden { display:none; }
-  #detail-rename { background:#2a2a2a; color:#fff; }
   #detail-delete { background:#3a1414; color:#ff453a; }
 
   /* ---------- Annotation editor ---------- */
@@ -1100,7 +1097,7 @@
         <button id="bulk-crop" disabled title="Crop, zoom, or resize the selected photo (select exactly 1)">Crop</button>
         <button id="bulk-remove-markup" disabled title="Restore the selected photo's original, pre-edit version (select exactly 1)">Restore original</button>
         <button id="bulk-categorize" disabled title="Assign a report category to the selected photos">Categorize</button>
-        <button id="bulk-move-building" disabled title="Move the selected photos to a different building">Move Building</button>
+        <button id="bulk-move-building" disabled title="Move the selected photos to a different building">Move to Building</button>
         <button id="bulk-move-project" disabled title="Move the selected photos to a different project">Move Project</button>
         <button id="bulk-pdf" disabled title="PDF report of selected photos">Create PDF</button>
         <button id="bulk-share" disabled title="Send the selected photos/videos (e.g. by text)">Send</button>
@@ -1569,7 +1566,7 @@
     <button id="detail-share">Send</button>
     <button id="detail-rename">Rename</button>
     <button id="detail-categorize">Categorize</button>
-    <button id="detail-move-building">Move Building</button>
+    <button id="detail-move-building">Move to Building</button>
     <button id="detail-move-project">Move Project</button>
     <button id="detail-delete">Delete</button>
   </div>
