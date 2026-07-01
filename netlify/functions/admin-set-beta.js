@@ -145,7 +145,13 @@ exports.handler = async function (event) {
     const caller = await verifyIdToken(idToken);
     const allowlist = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
     if (!caller.email || !allowlist.includes(caller.email.toLowerCase())) {
-      return { statusCode: 403, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Not authorized as admin.' }) };
+      return {
+        statusCode: 403,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          error: `Not authorized as admin. Signed in as: "${caller.email || 'unknown'}" — allowlist has ${allowlist.length} entry/entries. Check that ADMIN_EMAILS in Netlify matches exactly (no quotes, no spaces).`
+        })
+      };
     }
 
     const projectId = process.env.FIREBASE_PROJECT_ID;
