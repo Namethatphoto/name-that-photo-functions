@@ -2432,6 +2432,7 @@
     els.namingSublocDir.querySelectorAll('.dir-btn').forEach((b) => { b.classList.remove('active', 'suggested'); });
     els.namingRoomRow.classList.add('hidden');
     els.namingRoomSelect.value = '';
+    els.namingRoomSelect.classList.remove('selected');
   }
 
   // Applies the auto-suggested elevation (a small "•" marker, not a forced selection)
@@ -2505,6 +2506,7 @@
     els.namingCatRow.querySelectorAll('.cat-btn').forEach((b) => b.classList.toggle('active', b === btn));
     els.namingSublocDir.querySelectorAll('.dir-btn').forEach((b) => b.classList.remove('active', 'suggested'));
     els.namingRoomSelect.value = '';
+    els.namingRoomSelect.classList.remove('selected');
 
     if (pendingCategory === 'exterior') {
       els.namingSublocDir.classList.remove('hidden');
@@ -2533,6 +2535,7 @@
   // group consistently regardless of how each inspector phrases a room name out loud.
   els.namingRoomSelect.addEventListener('change', () => {
     pendingSubLocation = els.namingRoomSelect.value;
+    els.namingRoomSelect.classList.toggle('selected', !!els.namingRoomSelect.value);
   });
 
   els.btnRetry.addEventListener('click', () => {
