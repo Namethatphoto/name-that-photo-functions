@@ -2229,29 +2229,8 @@
     if (headingAtCapture != null) {
       stampCompass(ctx, canvas.width, canvas.height, headingAtCapture);
     }
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      if (silentMode) {
-        // Silent mode: skip voice overlay, auto-save immediately
-        silentPhotoCount++;
-        const now = Date.now();
-        const autoName = 'Photo ' + silentPhotoCount;
-        const record = {
-          id: 'p_' + now + '_' + Math.random().toString(36).slice(2, 7),
-          name: autoName,
-          blob,
-          createdAt: now,
-          order: now,
-          folderId: currentFolderId,
-        };
-        if (headingAtCapture != null) record.heading = headingAtCapture;
-        if (currentBuilding) record.building = currentBuilding;
-        await dbAdd(record);
-        toast('Saved: ' + autoName);
-        await refreshGallery();
-      } else {
-        openNaming(blob, false, undefined, undefined, headingAtCapture);
-      }
+    canvas.toBlob((blob) => {
+      if (blob) openNaming(blob, false, undefined, undefined, headingAtCapture);
     }, 'image/jpeg', 0.92);
   }
 
@@ -2478,7 +2457,18 @@
       pendingFrontFacing = dir;
       applySuggestedDirection();
     });
-    startListening();
+    if (silentMode) {
+      // Silent mode: mic stays off, pre-assign an auto-name so Save is enabled immediately
+      silentPhotoCount++;
+      currentTranscript = 'Photo ' + silentPhotoCount;
+      renderTranscript();
+      els.micDot.style.background = '#555';
+      els.micDot.style.animation = 'none';
+      els.micLabel.textContent = '🔇 Silent mode — select category then tap Save';
+      els.btnSave.disabled = false;
+    } else {
+      startListening();
+    }
   }
 
   function closeNaming() {
@@ -2494,6 +2484,8 @@
     pendingHeading = null;
     els.importProgress.style.display = 'none';
     els.btnRetry.textContent = 'Retake';
+    // Restore mic-dot animation for next open (may have been suppressed by silent mode)
+    els.micDot.style.animation = '';
   }
 
   els.namingCatRow.addEventListener('click', (e) => {
