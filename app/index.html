@@ -165,6 +165,10 @@
      (plain blue icon, no label) until a building is actually added, at which point
      #building-readout shows the active building name. Single-building projects never
      see any change beyond this one small icon. */
+  #cam-exit-app { position:absolute; top:env(safe-area-inset-top, 10px); left:10px;
+    background:#0a84ff; border:2px solid #0a84ff; color:#fff; font-size:13px; font-weight:700;
+    padding:8px 14px; border-radius:18px; white-space:nowrap; z-index:10;
+    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
   #building-toggle { position:absolute; top:calc(env(safe-area-inset-top, 12px) + 44px); left:16px;
     width:44px; height:44px; border-radius:50%; background:#0a84ff; border:2px solid #0a84ff;
     color:#fff; font-size:18px; font-weight:700; z-index:5; }
@@ -1012,6 +1016,7 @@
       <div id="dsk-recent-strip"></div>
     </div>
     <div id="cam-status"></div>
+    <button id="cam-exit-app" title="Exit app">Exit App</button>
     <button id="flip-cam" title="Flip camera">⟲</button>
     <button id="compass-toggle" title="Stamp compass heading on photo">🧭</button>
     <div id="compass-readout" class="hidden"></div>

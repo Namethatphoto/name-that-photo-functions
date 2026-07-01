@@ -6209,15 +6209,16 @@
   });
 
   /* ---------------- Exit button ---------------- */
-  const exitBtn = document.getElementById('exit-app');
-  if (exitBtn) {
-    exitBtn.addEventListener('click', () => {
-      if (confirm('Exit to the Name That Photo home page?')) {
-        stopCamera();
-        window.location.href = '/';
-      }
-    });
+  function handleExitApp() {
+    if (confirm('Exit to the Name That Photo home page?')) {
+      stopCamera();
+      window.location.href = '/';
+    }
   }
+  const exitBtn = document.getElementById('exit-app');
+  if (exitBtn) exitBtn.addEventListener('click', handleExitApp);
+  const camExitBtn = document.getElementById('cam-exit-app');
+  if (camExitBtn) camExitBtn.addEventListener('click', handleExitApp);
 
   /* ---------------- Service worker ---------------- */
   // updateViaCache:'none' tells the browser to always fetch sw.js itself straight from the
