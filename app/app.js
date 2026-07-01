@@ -463,13 +463,7 @@
       });
     }
 
-    // "+ Create Building" button — always present so users can create buildings
-    // directly from the gallery without switching to the camera tab.
-    const createBtn = document.createElement('button');
-    createBtn.id = 'bldg-create-btn';
-    createBtn.textContent = '+ Create Building';
-    createBtn.addEventListener('click', () => openBuildingsModal());
-    bar.appendChild(createBtn);
+
   }
 
   // Buildings modal — replaced the original prompt()-based menu (task #141 follow-up)
