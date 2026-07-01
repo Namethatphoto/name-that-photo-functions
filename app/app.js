@@ -704,7 +704,7 @@
   // synced yet into Drive/Name That Photo/<project name>. Each record is flagged
   // driveSynced (mirrors the backedUp flag pattern from Backup-to-Photos) so
   // re-running only sends what's new.
-  async // ── Auto-Sync (timer-based, silent) ──────────────────────────────────────────
+  // ── Auto-Sync (timer-based, silent) ──────────────────────────────────────────
   async function autoSyncToDrive() {
     if (autoSyncRunning) return;           // don't stack if previous run is still going
     if (!currentFolderId) return;          // no project selected
