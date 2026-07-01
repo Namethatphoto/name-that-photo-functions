@@ -3151,6 +3151,36 @@
           openDetail(rec);
         }
       });
+      // Desktop drag-to-filesystem: lets the user drag a photo out of the gallery
+      // and drop it onto the desktop or into any folder/app as a real file.
+      // - Filename encodes category + sublocation + building + voice label so the
+      //   file is self-describing on disk.
+      // - rec.blob is always the annotated (marked-up) version; originalBlob holds
+      //   the pre-markup original. We drag the annotated copy.
+      // - Only enabled outside reorder mode (reorder uses its own pointer-event drag).
+      // - DownloadURL is a Chrome/Edge extension to dataTransfer that triggers an OS
+      //   file-drop; Safari/Firefox ignore it gracefully.
+      if (!reorderMode) {
+        div.draggable = true;
+        div.addEventListener('dragstart', (e) => {
+          if (reorderMode) { e.preventDefault(); return; }
+          const mimeType = rec.blob.type || (rec.kind === 'pdf' ? 'application/pdf' : rec.kind === 'video' ? 'video/mp4' : 'image/jpeg');
+          const ext = rec.kind === 'pdf' ? 'pdf' : rec.kind === 'video' ? (mimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
+          // Build a descriptive filename from all available metadata fields
+          const parts = [];
+          if (rec.category && ['exterior', 'roof', 'interior'].includes(rec.category)) {
+            parts.push(rec.category === 'exterior' ? 'Exterior' : rec.category === 'roof' ? 'Roof' : 'Interior');
+            if (rec.subLocation) parts.push(rec.subLocation);
+          }
+          if (rec.building) parts.push(rec.building);
+          parts.push(rec.name || 'Photo');
+          const filename = sanitizeFilename(parts.join(' - ')) + '.' + ext;
+          const dragUrl = URL.createObjectURL(rec.blob);
+          e.dataTransfer.effectAllowed = 'copy';
+          e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${dragUrl}`);
+          div.addEventListener('dragend', () => URL.revokeObjectURL(dragUrl), { once: true });
+        });
+      }
       div.appendChild(img);
       div.appendChild(label);
       if (rec.backedUp) {
