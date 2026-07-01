@@ -2701,9 +2701,9 @@
     els.tabGallery.classList.add('active');
     els.tabCamera.classList.remove('active');
     // Restore gallery chrome
-    document.getElementById('top-left-group').style.display = '';
-    document.getElementById('project-center').style.display = '';
-    document.getElementById('exit-app').style.display = '';
+    document.getElementById('top-left-group').style.display = 'flex';
+    document.getElementById('project-center').style.display = 'flex';
+    document.getElementById('exit-app').style.display = 'block';
     stopCamera();
     refreshGallery();
   }
