@@ -140,13 +140,7 @@
     #shutter { width:60px; height:60px; border-width:4px; }
     #tabbar button { padding:7px 0; font-size:12px; }
     #tabbar button .tab-icon { font-size:17px; }
-    /* Current Project tab does the same job as this pill on phones — no need for both.
-       !important because the base #select-project-pill rule (which removes the .hidden
-       display:none once a project exists) sits later in the stylesheet and would
-       otherwise win this tie on specificity, making the pill reappear after project
-       creation. */
-    #select-project-pill { display:none !important; }
-  }
+      }
   #cam-status { position:absolute; top:env(safe-area-inset-top, 12px); left:0; right:0;
     text-align:center; padding-top:12px; font-size:13px; color:#ccc; text-shadow:0 1px 2px #000; }
   #flip-cam { position:absolute; bottom:36px; right:24px; width:44px; height:44px;
@@ -417,13 +411,7 @@
 
   /* ---------- "Select Existing Project" pill (desktop only — see phone media query
      below; on phones the Current Project tab does the same job, so it's hidden). ---------- */
-  /* #select-project-pill lives in #project-corner */
-  #select-project-pill { display:flex; align-items:center; justify-content:center;
-    gap:4px; white-space:nowrap; box-sizing:border-box; flex:0 0 auto;
-    background:#0a84ff; border:none; border-radius:10px; padding:6px 12px; color:#fff;
-    font-size:12px; font-weight:700; cursor:pointer;
-    font-family:inherit; -webkit-appearance:none; appearance:none; }
-  #select-project-pill.hidden { display:none; }
+
 
 
 
@@ -566,10 +554,28 @@
     background:#0a0a0a; z-index:30; padding-top:4px; }
   #gallery-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;
     padding:8px 6px 10px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
-  #gallery-header-actions { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
-  #export-btn, #select-btn, #reorder-btn, #pdf-all-btn, #attach-doc-btn, #backup-btn, #drive-sync-btn, #drive-pull-btn, #drive-link-btn, #account-btn { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:7px 10px; font-size:12.5px; font-weight:600; flex:1 1 auto; text-align:center; }
-  #export-btn:disabled, #pdf-all-btn:disabled, #backup-btn:disabled, #drive-sync-btn:disabled { background:#333; color:#777; }
-  #select-btn.active, #reorder-btn.active { background:#fff; color:#0a84ff; }
+  #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
+  /* ── Gallery action menu ── */
+  .gallery-menu-wrap { position:relative; }
+  #gallery-menu-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
+    padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+    -webkit-appearance:none; appearance:none; white-space:nowrap; }
+  #gallery-menu-btn.menu-open { background:#333; }
+  #gallery-menu-dropdown { display:none; position:absolute; top:calc(100% + 6px); left:0;
+    background:#1c1c1e; border:1px solid #444; border-radius:12px; padding:8px;
+    z-index:50; min-width:200px; flex-direction:column; gap:4px;
+    box-shadow:0 8px 28px rgba(0,0,0,.6); }
+  #gallery-menu-dropdown.open { display:flex; }
+  #gallery-menu-dropdown > button,
+  #gallery-menu-dropdown .export-btn-wrap #export-btn { background:#0a84ff; color:#fff;
+    border:none; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:600;
+    width:100%; text-align:left; cursor:pointer; font-family:inherit;
+    -webkit-appearance:none; appearance:none; }
+  #gallery-menu-dropdown > button:disabled,
+  #gallery-menu-dropdown .export-btn-wrap #export-btn:disabled { background:#2c2c2e; color:#666; }
+  #gallery-menu-dropdown #select-btn.active,
+  #gallery-menu-dropdown #reorder-btn.active { background:#fff; color:#0a84ff; }
+  #gallery-menu-dropdown .export-btn-wrap { width:100%; }
   /* Export quality popover — folds "Save Originals" into the Export/Zip button as a choice,
      instead of a separate always-visible button, to save header space (task: combine export options). */
   .export-btn-wrap { position:relative; flex:1 1 auto; }
@@ -906,7 +912,6 @@
         <span class="pill-name">+ Create</span>
       </button>
     </div>
-    <button id="select-project-pill" class="hidden" title="Select existing project"><span>Select Existing Project</span></button>
   </div>
 
   <div id="camera-view">
@@ -1056,22 +1061,27 @@
     <div id="gallery-sticky-top">
     <div id="gallery-header">
       <div id="gallery-header-actions">
-        <button id="select-btn">Select</button>
-        <button id="reorder-btn" title="Drag photos to rearrange">Reorder</button>
-        <button id="pdf-all-btn" disabled title="PDF report of all photos">Create Report</button>
-        <button id="attach-doc-btn" title="Attach a PDF (e.g. weather report, measurement report) — it gets appended to this folder's photo report">Attach PDF</button>
-        <button id="backup-btn" disabled title="Save this folder's photos/videos to your phone's Photo library">Backup to Phone</button>
-        <button id="drive-sync-btn" disabled title="Sync this project's photos to Google Drive">Sync to Drive</button>
-        <button id="drive-pull-btn" title="Pull a project's photos down from Google Drive">Pull from Drive</button>
-        <button id="drive-link-btn" title="Get a shareable link to this project's synced photos">Send Link</button>
-        <div class="export-btn-wrap">
-          <button id="export-btn" disabled>Export / Zip</button>
-          <div id="export-quality-menu">
-            <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
-            <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+        <div class="gallery-menu-wrap">
+          <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
+          <div id="gallery-menu-dropdown">
+            <button id="select-btn">Select</button>
+            <button id="reorder-btn">Reorder</button>
+            <button id="pdf-all-btn" disabled>Create Report</button>
+            <button id="attach-doc-btn">Attach PDF</button>
+            <button id="backup-btn" disabled>Backup to Phone</button>
+            <button id="drive-sync-btn" disabled>Sync to Drive</button>
+            <button id="drive-pull-btn">Pull from Drive</button>
+            <button id="drive-link-btn">Send Link</button>
+            <div class="export-btn-wrap">
+              <button id="export-btn" disabled>Export / Zip</button>
+              <div id="export-quality-menu">
+                <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
+                <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+              </div>
+            </div>
+            <button id="account-btn">Account</button>
           </div>
         </div>
-        <button id="account-btn" title="Account & subscription">Account</button>
       </div>
     </div>
     <div id="building-filter-bar"></div>

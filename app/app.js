@@ -277,7 +277,6 @@
     projectBanner: document.getElementById('project-banner'),
     projectBannerLabel: document.getElementById('project-banner-label'),
     projectBannerName: document.getElementById('project-banner-name'),
-    selectProjectPill: document.getElementById('select-project-pill'),
     foldersModal: document.getElementById('folders-modal'),
     foldersSearch: document.getElementById('folders-search'),
     foldersSearchMic: document.getElementById('folders-search-mic'),
@@ -1023,7 +1022,6 @@
       els.projectBanner.classList.toggle('hidden', !hasCreated);
       // Select Existing Project shows/hides alongside the current-project pill — both
       // are meaningless until a real project exists to switch away from.
-      if (els.selectProjectPill) els.selectProjectPill.classList.toggle('hidden', !hasCreated);
     }
   }
 
@@ -1192,7 +1190,6 @@
 
   if (els.projectBanner) els.projectBanner.addEventListener('click', () => openFoldersModal(false));
   if (els.createProjectPill) els.createProjectPill.addEventListener('click', () => openFoldersModal(true));
-  if (els.selectProjectPill) els.selectProjectPill.addEventListener('click', () => openFoldersModal(false));
   els.foldersClose.addEventListener('click', closeFoldersModal);
   els.foldersSearch.addEventListener('input', () => {
     folderSearchQuery = els.foldersSearch.value.trim().toLowerCase();
@@ -3120,6 +3117,31 @@
     await dbAdd(rec);
     refreshGallery();
   });
+
+  // Gallery action dropdown toggle
+  (function() {
+    const menuBtn = document.getElementById('gallery-menu-btn');
+    const dropdown = document.getElementById('gallery-menu-dropdown');
+    if (!menuBtn || !dropdown) return;
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.toggle('open');
+      menuBtn.classList.toggle('menu-open', isOpen);
+    });
+    // Close when clicking a button inside the dropdown (except export sub-menu)
+    dropdown.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (btn && btn.id !== 'export-btn') {
+        dropdown.classList.remove('open');
+        menuBtn.classList.remove('menu-open');
+      }
+    });
+    // Close on outside click
+    document.addEventListener('click', () => {
+      dropdown.classList.remove('open');
+      menuBtn.classList.remove('menu-open');
+    });
+  })();
 
   els.selectBtn.addEventListener('click', () => {
     selectMode = !selectMode;
