@@ -3062,9 +3062,9 @@
     openRecategorizeBulk([...selectedIds]);
   });
 
-  els.bulkMoveBuilding.addEventListener('click', () => {
+  els.bulkMoveBuilding.addEventListener('click', async () => {
     if (selectedIds.size === 0) return;
-    openMoveBuildingBulk([...selectedIds]);
+    await openMoveBuildingBulk([...selectedIds]);
   });
 
   els.bulkMoveProject.addEventListener('click', () => {
@@ -3300,6 +3300,7 @@
      moveBuildingTargetIds holds one ID (detail view) or several (bulk select),
      exactly like recatTargetIds does for categorize. */
   let moveBuildingTargetIds = [];
+  let moveBuildingCurrentBuildings = []; // current rec.building values for the target photo(s)
 
   async function assignToBuilding(buildingName) {
     if (!moveBuildingTargetIds.length) return;
@@ -3317,6 +3318,17 @@
 
   function renderMoveBuildingList() {
     els.moveBuildingList.innerHTML = '';
+    const isBulk = moveBuildingTargetIds.length > 1;
+    const total = moveBuildingTargetIds.length;
+
+    // Build a frequency map: how many of the target photos are currently in each building
+    // '' key = unassigned. Used for both the "CURRENT" badge (single) and count badges (bulk).
+    const currentCounts = {};
+    moveBuildingCurrentBuildings.forEach((b) => {
+      const key = b || '';
+      currentCounts[key] = (currentCounts[key] || 0) + 1;
+    });
+
     if (!projectBuildings.length) {
       const empty = document.createElement('div');
       empty.id = 'move-building-empty';
@@ -3324,14 +3336,34 @@
       els.moveBuildingList.appendChild(empty);
       return;
     }
-    const options = ['', ...projectBuildings]; // '' renders as "No Building" — un-assigns
+
+    const options = ['', ...projectBuildings]; // '' = "No Building" / unassigned
     options.forEach((b) => {
+      const count = currentCounts[b] || 0;
+      const isCurrent = !isBulk && count > 0;
+
       const row = document.createElement('div');
-      row.className = 'building-row';
+      row.className = 'building-row' + (isCurrent ? ' current' : '');
+
       const name = document.createElement('div');
       name.className = 'building-row-name';
       name.textContent = b || 'No Building';
       row.appendChild(name);
+
+      if (isCurrent) {
+        // Single photo — mark its current building
+        const tag = document.createElement('div');
+        tag.className = 'building-row-tag';
+        tag.textContent = 'CURRENT';
+        row.appendChild(tag);
+      } else if (isBulk && count > 0) {
+        // Bulk — show how many of the selected photos are already here
+        const tag = document.createElement('div');
+        tag.className = 'building-row-tag';
+        tag.textContent = count === total ? 'ALL HERE' : `${count} here`;
+        row.appendChild(tag);
+      }
+
       row.addEventListener('click', () => assignToBuilding(b));
       els.moveBuildingList.appendChild(row);
     });
@@ -3339,17 +3371,26 @@
 
   function openMoveBuilding(rec) {
     moveBuildingTargetIds = [rec.id];
+    moveBuildingCurrentBuildings = [rec.building || ''];
     els.moveBuildingTitle.textContent = 'Assign Building';
     els.moveBuildingNewInput.value = '';
     renderMoveBuildingList();
     els.moveBuildingModal.classList.add('active');
   }
 
-  // Bulk path: one save target list, shared title shows the count being moved.
-  function openMoveBuildingBulk(ids) {
+  // Bulk path — fetch the current building for each selected record so the modal
+  // can show which building(s) photos are already in before the user taps.
+  async function openMoveBuildingBulk(ids) {
     moveBuildingTargetIds = ids;
+    moveBuildingCurrentBuildings = [];
     els.moveBuildingTitle.textContent = `Assign Building — ${ids.length} photo${ids.length === 1 ? '' : 's'}`;
     els.moveBuildingNewInput.value = '';
+    // Fetch current building values before rendering so the count badges are accurate
+    const allRecords = await dbGetAll();
+    const targetSet = new Set(ids);
+    allRecords.filter((r) => targetSet.has(r.id)).forEach((r) => {
+      moveBuildingCurrentBuildings.push(r.building || '');
+    });
     renderMoveBuildingList();
     els.moveBuildingModal.classList.add('active');
   }
@@ -3357,6 +3398,7 @@
   function closeMoveBuildingModal() {
     els.moveBuildingModal.classList.remove('active');
     moveBuildingTargetIds = [];
+    moveBuildingCurrentBuildings = [];
     els.moveBuildingNewInput.value = '';
   }
 
