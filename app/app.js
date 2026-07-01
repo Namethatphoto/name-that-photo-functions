@@ -3284,17 +3284,31 @@
 
   els.recatSave.addEventListener('click', async () => {
     if (recatTargetIds.length === 0) return;
-    const records = await dbGetAll();
-    const targetSet = new Set(recatTargetIds);
-    const matches = records.filter((r) => targetSet.has(r.id));
-    for (const rec of matches) {
-      rec.category = recatPendingCategory;
-      rec.subLocation = recatPendingSubLocation;
-      await dbAdd(rec);
+    try {
+      const records = await dbGetAll();
+      const targetSet = new Set(recatTargetIds);
+      const matches = records.filter((r) => targetSet.has(r.id));
+      for (const rec of matches) {
+        rec.category = recatPendingCategory;
+        rec.subLocation = recatPendingSubLocation;
+        await dbAdd(rec);
+      }
+      els.recatModal.classList.remove('active');
+      recatTargetIds = [];
+      const catLabel = recatPendingCategory === 'exterior' ? 'Exterior'
+        : recatPendingCategory === 'roof' ? 'Roof'
+        : recatPendingCategory === 'interior' ? 'Interior' : 'Other';
+      toast(`${matches.length} photo${matches.length === 1 ? '' : 's'} set to ${catLabel}`);
+      selectedIds.clear();
+      selectMode = false;
+      els.selectBtn.classList.remove('active');
+      els.selectBtn.textContent = 'Select';
+      els.bulkBar.classList.remove('active');
+      refreshGallery();
+    } catch (err) {
+      console.error('Category save failed:', err);
+      toast('Save failed — please try again');
     }
-    els.recatModal.classList.remove('active');
-    recatTargetIds = [];
-    refreshGallery();
   });
 
   /* ---------------- Move to Building modal ----------------
@@ -3320,6 +3334,11 @@
     }
     closeMoveBuildingModal();
     toast(buildingName ? `Assigned to ${buildingName}` : 'Building removed');
+    selectedIds.clear();
+    selectMode = false;
+    els.selectBtn.classList.remove('active');
+    els.selectBtn.textContent = 'Select';
+    els.bulkBar.classList.remove('active');
     refreshGallery();
   }
 
