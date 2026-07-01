@@ -1024,7 +1024,8 @@
       els.projectBannerLabel.textContent = hasCreated ? 'Current Project' : 'Create Project';
     }
     if (els.projectBannerName) {
-      els.projectBannerName.textContent = hasCreated ? (currentFolderName || 'My Inspection') : 'My Inspection';
+      els.projectBannerName.textContent = hasCreated ? (currentFolderName || '') : '';
+      els.projectBannerName.style.display = hasCreated ? '' : 'none';
     }
     // Open in create-focused mode before any project exists; switch mode after
     if (els.projectBanner) {
@@ -1181,7 +1182,7 @@
   // input (used by the Create New Project pill), instead of the search field (default).
   function openFoldersModal(focusNewProject) {
     const hasCreatedNow = localStorage.getItem(HAS_CREATED_PROJECT_KEY) === '1';
-    els.newFolderInput.value = !hasCreatedNow ? 'My Inspection' : '';
+    els.newFolderInput.value = '';
     els.foldersSearch.value = '';
     folderSearchQuery = '';
     renderFoldersList();
@@ -1189,7 +1190,6 @@
     setTimeout(() => {
       if (focusNewProject) {
         els.newFolderInput.focus();
-        els.newFolderInput.select();
       } else els.foldersSearch.focus();
     }, 50);
   }
