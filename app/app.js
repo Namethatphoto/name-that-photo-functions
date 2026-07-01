@@ -367,6 +367,7 @@
   let selectedIds = new Set();
   let galleryIds = []; // ids currently rendered in the grid, for Select all
   let reorderMode = false;
+  let reorderSelected = new Set(); // IDs tapped for group move in reorder mode
   let currentFolderId = null;     // the active property/folder — scopes capture + gallery
   let currentFolderName = '';
   let pdfTitleAutoFilled = true;  // tracks whether the PDF title still matches the folder-name default
@@ -700,6 +701,51 @@
     return res.json();
   }
 
+  // Uploads (or replaces) a _metadata.json sidecar in the project's Drive folder.
+  // This sidecar lets any device that pulls the project restore category/subLocation/
+  // building/heading/name for each photo — fields that aren't encoded in the filename.
+  async function syncMetadataToDrive(projectFolderId, records, token) {
+    const entries = records
+      .filter((r) => r.driveFileId)
+      .map((r) => ({
+        driveFileId: r.driveFileId,
+        name: r.name || '',
+        category: r.category || '',
+        subLocation: r.subLocation || '',
+        building: r.building || '',
+        heading: r.heading != null ? r.heading : null,
+        order: r.order != null ? r.order : null,
+      }));
+    if (!entries.length) return;
+    const blob = new Blob([JSON.stringify(entries)], { type: 'application/json' });
+    // Check if sidecar already exists so we update rather than accumulate copies.
+    const q = encodeURIComponent(`name='_metadata.json' and '${projectFolderId}' in parents and trashed=false`);
+    const listRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&pageSize=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const listData = await listRes.json();
+    const existing = listData.files && listData.files[0];
+    const form = new FormData();
+    if (existing) {
+      form.append('metadata', new Blob([JSON.stringify({ name: '_metadata.json' })], { type: 'application/json' }));
+      form.append('file', blob, '_metadata.json');
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+    } else {
+      form.append('metadata', new Blob([JSON.stringify({ name: '_metadata.json', parents: [projectFolderId] })], { type: 'application/json' }));
+      form.append('file', blob, '_metadata.json');
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+    }
+  }
+
   // Manual sync: uploads every photo/PDF in the current project that hasn't been
   // synced yet into Drive/Name That Photo/<project name>. Each record is flagged
   // driveSynced (mirrors the backedUp flag pattern from Backup-to-Photos) so
@@ -736,6 +782,10 @@
         } catch (e) { break; } // network error — try again next interval
       }
       if (synced > 0) {
+        try {
+          const allRecords = await getFolderPhotos(currentFolderId);
+          await syncMetadataToDrive(projectFolderId, allRecords, token);
+        } catch (_) { /* non-critical — photos are already synced */ }
         toast(`☁️ Auto-synced ${synced} photo${synced === 1 ? '' : 's'} to Drive`);
         refreshGallery();
       }
@@ -811,6 +861,13 @@
           toast(`Sync stopped: ${e.message || 'upload failed'}`);
           break;
         }
+      }
+      // Upload sidecar so any device that pulls this project gets categories/names back.
+      if (synced > 0) {
+        try {
+          const allRecords = await getFolderPhotos(currentFolderId);
+          await syncMetadataToDrive(projectFolderId, allRecords, token);
+        } catch (_) { /* non-critical — photos are already synced */ }
       }
       toast(`Synced ${synced}/${pending.length} item${pending.length === 1 ? '' : 's'} to Drive`);
     } finally {
@@ -959,15 +1016,30 @@
       getFolderPhotos(localFolder.id),
     ]);
     const alreadyPulled = new Set(localRecords.filter((r) => r.driveFileId).map((r) => r.driveFileId));
-    const toPull = driveFiles.filter((f) => !alreadyPulled.has(f.id));
+    // Separate metadata sidecar from actual media files before filtering
+    const metaFile = driveFiles.find((f) => f.name === '_metadata.json');
+    const photoFiles = driveFiles.filter((f) => f.name !== '_metadata.json');
+    const toPull = photoFiles.filter((f) => !alreadyPulled.has(f.id));
 
     if (!toPull.length) {
-      els.drivePullStatus.textContent = driveFiles.length
-        ? `All ${driveFiles.length} item${driveFiles.length === 1 ? '' : 's'} already pulled into "${projectName}".`
+      els.drivePullStatus.textContent = photoFiles.length
+        ? `All ${photoFiles.length} item${photoFiles.length === 1 ? '' : 's'} already pulled into "${projectName}".`
         : `"${projectName}" has no files in Drive yet.`;
       refreshGallery();
       refreshDesktopSummary();
       return;
+    }
+
+    // Load the metadata sidecar so we can restore categories/names on each record
+    const metaMap = {};
+    if (metaFile) {
+      try {
+        const metaBlob = await downloadDriveFile(metaFile.id, token);
+        const metaEntries = JSON.parse(await metaBlob.text());
+        for (const entry of metaEntries) {
+          if (entry.driveFileId) metaMap[entry.driveFileId] = entry;
+        }
+      } catch (_) { /* no metadata — pull without categories */ }
     }
 
     let pulled = 0;
@@ -976,9 +1048,10 @@
       try {
         const blob = await downloadDriveFile(file.id, token);
         const now = Date.now() + pulled; // keep stable relative order among this batch
+        const meta = metaMap[file.id];
         const record = {
           id: 'p_' + now + '_' + Math.random().toString(36).slice(2, 7),
-          name: nameFromDriveFilename(file.name),
+          name: (meta && meta.name) ? meta.name : nameFromDriveFilename(file.name),
           blob,
           createdAt: now,
           order: now,
@@ -988,6 +1061,13 @@
         };
         if (file.mimeType && file.mimeType.startsWith('video/')) record.kind = 'video';
         else if (file.mimeType === 'application/pdf') record.kind = 'pdf';
+        // Restore preserved metadata fields
+        if (meta) {
+          if (meta.category) record.category = meta.category;
+          if (meta.subLocation) record.subLocation = meta.subLocation;
+          if (meta.building) record.building = meta.building;
+          if (meta.heading != null) record.heading = meta.heading;
+        }
         await dbAdd(record);
         pulled += 1;
       } catch (e) {
@@ -1132,6 +1212,7 @@
     selectMode = false;
     selectedIds.clear();
     reorderMode = false;
+    reorderSelected.clear();
     els.selectBtn.classList.remove('active');
     els.selectBtn.textContent = 'Select';
     els.reorderBtn.classList.remove('active');
@@ -1284,6 +1365,14 @@
 
   if (els.projectBanner) els.projectBanner.addEventListener('click', () => openFoldersModal(false));
   els.foldersClose.addEventListener('click', closeFoldersModal);
+
+  const foldersRetrieveCloud = document.getElementById('folders-retrieve-cloud');
+  if (foldersRetrieveCloud) {
+    foldersRetrieveCloud.addEventListener('click', () => {
+      closeFoldersModal();
+      openDrivePullModal();
+    });
+  }
   els.foldersSearch.addEventListener('input', () => {
     folderSearchQuery = els.foldersSearch.value.trim().toLowerCase();
     renderFoldersList();
@@ -3031,7 +3120,17 @@
         }
       });
       div.addEventListener('click', () => {
-        if (reorderMode) return;
+        if (reorderMode) {
+          // Tap to mark/unmark for group move
+          if (reorderSelected.has(rec.id)) {
+            reorderSelected.delete(rec.id);
+            div.classList.remove('move-selected');
+          } else {
+            reorderSelected.add(rec.id);
+            div.classList.add('move-selected');
+          }
+          return;
+        }
         if (selectMode) {
           toggleSelected(rec.id, div);
         } else {
@@ -3111,10 +3210,31 @@
       let dragging = false;
       let pointerId = null;
       let grabX = 0, grabY = 0;
+      let lastClientX = 0, lastClientY = 0;
+      let scrollRafId = null;
+
+      // Auto-scroll the gallery when the dragged thumb is near the top or bottom edge.
+      // Runs in a rAF loop so it fires even when the pointer isn't moving.
+      function autoScrollStep() {
+        if (!dragging) return;
+        const scrollEl = els.galleryView;
+        const sr = scrollEl.getBoundingClientRect();
+        const ZONE = 80;   // px from edge that triggers scroll
+        const distTop = lastClientY - sr.top;
+        const distBot = sr.bottom - lastClientY;
+        if (distTop >= 0 && distTop < ZONE) {
+          scrollEl.scrollTop -= Math.ceil(12 * (1 - distTop / ZONE));
+        } else if (distBot >= 0 && distBot < ZONE) {
+          scrollEl.scrollTop += Math.ceil(12 * (1 - distBot / ZONE));
+        }
+        scrollRafId = requestAnimationFrame(autoScrollStep);
+      }
 
       function onMove(e) {
         if (!dragging || e.pointerId !== pointerId) return;
         e.preventDefault();
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
         thumb.style.transform = 'none';
         let rect = thumb.getBoundingClientRect();
 
@@ -3137,6 +3257,8 @@
       function onUp(e) {
         if (!dragging || e.pointerId !== pointerId) return;
         dragging = false;
+        cancelAnimationFrame(scrollRafId);
+        scrollRafId = null;
         thumb.classList.remove('dragging');
         thumb.style.transform = '';
         thumb.style.zIndex = '';
@@ -3144,6 +3266,21 @@
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onUp);
+
+        // Group move: if this thumb was marked, insert all other marked thumbs
+        // immediately after it, then clear the group selection.
+        if (reorderSelected.has(thumb.dataset.id) && reorderSelected.size > 1) {
+          const others = Array.from(els.grid.querySelectorAll('.thumb'))
+            .filter((t) => reorderSelected.has(t.dataset.id) && t !== thumb);
+          let insertRef = thumb.nextElementSibling;
+          others.forEach((t) => {
+            t.classList.remove('move-selected');
+            els.grid.insertBefore(t, insertRef); // null = append
+          });
+          thumb.classList.remove('move-selected');
+          reorderSelected.clear();
+        }
+
         persistReorder().catch((err) => console.error('reorder save failed', err));
       }
 
@@ -3154,12 +3291,15 @@
         const rect = thumb.getBoundingClientRect();
         grabX = e.clientX - rect.left;
         grabY = e.clientY - rect.top;
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
         thumb.classList.add('dragging');
         thumb.style.zIndex = '20';
         els.grid.style.touchAction = 'none'; // lock scroll only while a drag is in progress
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
         window.addEventListener('pointercancel', onUp);
+        scrollRafId = requestAnimationFrame(autoScrollStep);
         e.preventDefault();
       });
     });
@@ -3301,6 +3441,7 @@
     if (!selectMode) selectedIds.clear();
     if (selectMode && reorderMode) {
       reorderMode = false;
+      reorderSelected.clear();
       els.reorderBtn.classList.remove('active');
       els.reorderBtn.textContent = 'Rearrange Photos';
     }
@@ -3374,6 +3515,7 @@
       }
     }
     els.renameModal.classList.remove('active');
+    selectedIds.delete(renameTargetId);
     renameTargetId = null;
     refreshGallery();
   });
@@ -3933,6 +4075,12 @@
       const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, rx = Math.abs(x2 - x1) / 2, ry = Math.abs(y2 - y1) / 2;
       ctx.beginPath();
       ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (shape.type === 'line') {
+      const x1 = shape.x1 * w, y1 = shape.y1 * h, x2 = shape.x2 * w, y2 = shape.y2 * h;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
       ctx.stroke();
     } else if (shape.type === 'arrow') {
       const x1 = shape.x1 * w, y1 = shape.y1 * h, x2 = shape.x2 * w, y2 = shape.y2 * h;

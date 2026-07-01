@@ -465,6 +465,8 @@
   #folders-actions button { flex:1; padding:11px 0; border-radius:8px; border:none; font-size:14px; font-weight:600; }
   #folders-close { background:#3a3a3c; color:#fff; }
   #new-folder-add { background:#0a84ff; color:#fff; }
+  #folders-retrieve-cloud { width:100%; margin-top:8px; padding:11px 0; border-radius:8px;
+    border:1px solid #444; background:#1c1c1e; color:#0a84ff; font-size:14px; font-weight:600; }
 
   /* ---------- Buildings modal (task #141 voice follow-up) — same look/structure as
      the Projects (folders) modal above, so switching/adding a building feels like the
@@ -595,7 +597,8 @@
   #gallery-menu-dropdown #reorder-btn.active { background:#fff; color:#0a84ff; }
   #select-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
     padding:8px 13px; font-size:13px; font-weight:600; white-space:nowrap;
-    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
+    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer;
+    margin-left:10px; }
   #select-btn.active { background:#fff; color:#0a84ff; border-color:#fff; }
   #gallery-menu-dropdown .export-btn-wrap { width:100%; }
   /* Export quality popover — folds "Save Originals" into the Export/Zip button as a choice,
@@ -641,6 +644,10 @@
     background:rgba(0,0,0,.55); color:#fff; font-size:14px; display:none; align-items:center; justify-content:center; }
   #grid.reorder-mode .drag-handle { display:flex; }
   .thumb.dragging { opacity:.55; box-shadow:0 10px 24px rgba(0,0,0,.6); z-index:20; transition:none; }
+  .thumb.move-selected { outline:3px solid #0a84ff; outline-offset:2px; }
+  .thumb.move-selected::after { content:'✓'; position:absolute; top:4px; right:4px;
+    background:#0a84ff; color:#fff; font-size:12px; font-weight:700;
+    width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .thumb.drag-over { outline:2px solid #0a84ff; }
   #empty-state { color:#777; text-align:center; padding:60px 20px; font-size:14px; }
 
@@ -925,7 +932,6 @@
     <!-- Top-left: menu + search + building btn -->
   <div id="top-left-group">
     <div id="top-left-row">
-      <button id="select-btn">☑️ Select</button>
       <div class="gallery-menu-wrap">
         <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
         <div id="gallery-menu-dropdown">
@@ -949,6 +955,7 @@
           <button id="account-btn">👤 Account</button>
         </div>
       </div>
+      <button id="select-btn">☑️ Select</button>
     </div>
     <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
     <div id="building-filter-bar"></div>
@@ -1128,7 +1135,7 @@
         <button id="bulk-categorize" disabled title="Assign a report category to the selected photos">Categorize</button>
         <button id="bulk-move-building" disabled title="Move the selected photos to a different building">Move to Building</button>
         <button id="bulk-move-project" disabled title="Move the selected photos to a different project">Move Project</button>
-        <button id="bulk-pdf" disabled title="PDF report of selected photos">Create PDF</button>
+        <button id="bulk-pdf" disabled title="PDF report of selected photos">Create Report</button>
         <button id="bulk-share" disabled title="Send the selected photos/videos (e.g. by text)">Send</button>
         <button id="bulk-delete" disabled>Delete</button>
       </div>
@@ -1350,6 +1357,7 @@
       <button id="folders-close">Close</button>
       <button id="new-folder-add">Add &amp; Switch</button>
     </div>
+    <button id="folders-retrieve-cloud">☁️ Retrieve From Cloud</button>
   </div>
 </div>
 
@@ -1604,6 +1612,7 @@
   <div id="annotate-toolbar">
     <div id="annotate-tools">
       <button data-tool="pen" title="Freehand">✏️</button>
+      <button data-tool="line" title="Straight Line">╱</button>
       <button data-tool="arrow" title="Arrow">↗️</button>
       <button data-tool="rect" title="Rectangle">▭</button>
       <button data-tool="circle" title="Circle">◯</button>
