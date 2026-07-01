@@ -2673,10 +2673,7 @@
     els.galleryView.classList.remove('active');
     els.tabCamera.classList.add('active');
     els.tabGallery.classList.remove('active');
-    // Hide gallery-only chrome (menu, search, project pill, exit) while on camera tab
-    document.getElementById('top-left-group').style.display = 'none';
-    document.getElementById('project-center').style.display = 'none';
-    document.getElementById('exit-app').style.display = 'none';
+    document.body.classList.add('camera-active');
     // Desktop users open this tab almost exclusively to use the "Choose from Library"
     // icon, not to shoot a photo — don't trigger a webcam permission prompt for that.
     // The .desktop-cam class (CSS) hides the shutter/flip-cam/compass controls (meaningless
@@ -2700,10 +2697,7 @@
     els.galleryView.classList.add('active');
     els.tabGallery.classList.add('active');
     els.tabCamera.classList.remove('active');
-    // Restore gallery chrome
-    document.getElementById('top-left-group').style.display = 'flex';
-    document.getElementById('project-center').style.display = 'flex';
-    document.getElementById('exit-app').style.display = 'block';
+    document.body.classList.remove('camera-active');
     stopCamera();
     refreshGallery();
   }
