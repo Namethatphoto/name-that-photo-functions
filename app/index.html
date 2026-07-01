@@ -556,14 +556,15 @@
     padding:8px 6px 10px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
   #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
   /* ── Gallery action menu ── */
-  .gallery-menu-wrap { position:relative; }
+  .gallery-menu-wrap { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
+    transform:translateX(-50%); z-index:89; }
   #gallery-menu-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
-    padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+    padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
     -webkit-appearance:none; appearance:none; white-space:nowrap; }
   #gallery-menu-btn.menu-open { background:#333; }
-  #gallery-menu-dropdown { display:none; position:absolute; top:calc(100% + 6px); left:0;
-    background:#1c1c1e; border:1px solid #444; border-radius:12px; padding:8px;
-    z-index:50; min-width:200px; flex-direction:column; gap:4px;
+  #gallery-menu-dropdown { display:none; position:absolute; top:calc(100% + 6px); left:50%;
+    transform:translateX(-50%); background:#1c1c1e; border:1px solid #444; border-radius:12px;
+    padding:8px; z-index:89; min-width:220px; flex-direction:column; gap:4px;
     box-shadow:0 8px 28px rgba(0,0,0,.6); }
   #gallery-menu-dropdown.open { display:flex; }
   #gallery-menu-dropdown > button,
@@ -914,6 +915,29 @@
     </div>
   </div>
 
+  <!-- Fixed top-center gallery menu -->
+  <div class="gallery-menu-wrap">
+    <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
+    <div id="gallery-menu-dropdown">
+      <button id="select-btn">Select</button>
+      <button id="reorder-btn">Reorder</button>
+      <button id="pdf-all-btn" disabled>Create Report</button>
+      <button id="attach-doc-btn">Attach PDF</button>
+      <button id="backup-btn" disabled>Backup to Phone</button>
+      <button id="drive-sync-btn" disabled>Sync to Drive</button>
+      <button id="drive-pull-btn">Pull from Drive</button>
+      <button id="drive-link-btn">Send Link</button>
+      <div class="export-btn-wrap">
+        <button id="export-btn" disabled>Export / Zip</button>
+        <div id="export-quality-menu">
+          <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
+          <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+        </div>
+      </div>
+      <button id="account-btn">Account</button>
+    </div>
+  </div>
+
   <div id="camera-view">
     <video id="preview" autoplay playsinline muted disablePictureInPicture x-webkit-airplay="deny"></video>
     <canvas id="preview-canvas"></canvas>
@@ -1060,29 +1084,7 @@
   <div id="gallery-view">
     <div id="gallery-sticky-top">
     <div id="gallery-header">
-      <div id="gallery-header-actions">
-        <div class="gallery-menu-wrap">
-          <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
-          <div id="gallery-menu-dropdown">
-            <button id="select-btn">Select</button>
-            <button id="reorder-btn">Reorder</button>
-            <button id="pdf-all-btn" disabled>Create Report</button>
-            <button id="attach-doc-btn">Attach PDF</button>
-            <button id="backup-btn" disabled>Backup to Phone</button>
-            <button id="drive-sync-btn" disabled>Sync to Drive</button>
-            <button id="drive-pull-btn">Pull from Drive</button>
-            <button id="drive-link-btn">Send Link</button>
-            <div class="export-btn-wrap">
-              <button id="export-btn" disabled>Export / Zip</button>
-              <div id="export-quality-menu">
-                <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
-                <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
-              </div>
-            </div>
-            <button id="account-btn">Account</button>
-          </div>
-        </div>
-      </div>
+      <div id="gallery-header-actions"></div>
     </div>
     <div id="building-filter-bar"></div>
     <div id="gallery-search-row" class="pdf-field-row">
