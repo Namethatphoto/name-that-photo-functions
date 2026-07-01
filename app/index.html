@@ -1645,7 +1645,7 @@
     createUserWithEmailAndPassword, signOut, sendPasswordResetEmail
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, serverTimestamp
+    getFirestore, doc, getDoc, setDoc, serverTimestamp, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -1700,6 +1700,15 @@
   // the function independently re-verifies this token against Google rather than trusting
   // the client, so this alone never grants access.
   window.fbGetIdToken = () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null));
+
+  // Real-time listener on the user's Firestore doc — used to detect admin-side changes
+  // (e.g. betaAccess revocation) without requiring the user to sign out and back in.
+  // Returns an unsubscribe function the caller must invoke on sign-out.
+  window.fbListenUserDoc = (uid, callback) => {
+    return onSnapshot(doc(db, 'users', uid), (snap) => {
+      callback(snap.exists() ? snap.data() : null);
+    });
+  };
 
   onAuthStateChanged(auth, (user) => {
     window.dispatchEvent(new CustomEvent('fb-auth-changed', { detail: { user } }));

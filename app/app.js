@@ -5978,6 +5978,7 @@
   let authMode = 'signin';
   let currentFirebaseUser = null;
   let currentUserDoc = null;
+  let unsubUserDoc = null; // Firestore real-time listener unsubscribe — see fb-auth-changed handler
   let appStarted = false;
 
   function showAuthError(msg) {
@@ -6348,6 +6349,8 @@
   window.addEventListener('fb-auth-changed', async (e) => {
     const user = e.detail.user;
     currentFirebaseUser = user;
+    // Tear down any existing Firestore listener from a previous session
+    if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
     if (user) {
       try {
         currentUserDoc = await window.fbGetUserDoc(user.uid);
@@ -6364,6 +6367,14 @@
       const wantsAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
       if (wantsAdmin && user.email && CLIENT_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
         showAdminScreen();
+      }
+      // Real-time listener — detects admin-side betaAccess revocation without requiring sign-out.
+      // Fires immediately with current doc (no-op since we just fetched it), then again on changes.
+      if (typeof window.fbListenUserDoc === 'function') {
+        unsubUserDoc = window.fbListenUserDoc(user.uid, (updatedDoc) => {
+          currentUserDoc = updatedDoc;
+          if (!hasAccess(updatedDoc)) showPaywallScreen();
+        });
       }
     } else {
       currentUserDoc = null;

@@ -148,9 +148,7 @@ exports.handler = async function (event) {
       return {
         statusCode: 403,
         headers: CORS_HEADERS,
-        body: JSON.stringify({
-          error: `Not authorized as admin. Signed in as: "${caller.email || 'unknown'}" — allowlist has ${allowlist.length} entry/entries. Check that ADMIN_EMAILS in Netlify matches exactly (no quotes, no spaces).`
-        })
+        body: JSON.stringify({ error: 'Not authorized as admin.' })
       };
     }
 
