@@ -275,7 +275,6 @@
     moveProjectTitle: document.getElementById('move-project-title'),
     moveProjectList: document.getElementById('move-project-list'),
     moveProjectCancel: document.getElementById('move-project-cancel'),
-    createProjectPill: document.getElementById('create-project-pill'),
     projectBanner: document.getElementById('project-banner'),
     projectBannerLabel: document.getElementById('project-banner-label'),
     projectBannerName: document.getElementById('project-banner-name'),
@@ -1025,7 +1024,6 @@
       // Never show the pill for the bootstrap default project — only once the user has
       // actually created one of their own via "Create New Project".
       const hasCreated = localStorage.getItem(HAS_CREATED_PROJECT_KEY) === '1';
-      els.projectBanner.classList.toggle('hidden', !hasCreated);
       // Select Existing Project shows/hides alongside the current-project pill — both
       // are meaningless until a real project exists to switch away from.
     }
@@ -1195,7 +1193,6 @@
   }
 
   if (els.projectBanner) els.projectBanner.addEventListener('click', () => openFoldersModal(false));
-  if (els.createProjectPill) els.createProjectPill.addEventListener('click', () => openFoldersModal(true));
   els.foldersClose.addEventListener('click', closeFoldersModal);
   els.foldersSearch.addEventListener('input', () => {
     folderSearchQuery = els.foldersSearch.value.trim().toLowerCase();

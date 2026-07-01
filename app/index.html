@@ -383,38 +383,41 @@
   #live-setup-save { background:#0a84ff; color:#fff; }
 
   /* ---------- Exit pill (persists across views) ---------- */
+  /* ── Top-left (menu + search + building) ── */
   #top-left-group { position:fixed; top:env(safe-area-inset-top, 10px); left:10px;
-    z-index:90; display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
-  #top-left-row { display:flex; flex-direction:row; align-items:center; gap:6px; }
-  #exit-app { background:#0a84ff; border:2px solid #0a84ff; color:#fff; font-size:13px; font-weight:700;
-    padding:8px 14px; border-radius:18px; white-space:nowrap; line-height:1.2;
-    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
+    z-index:90; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  #top-left-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
   #gallery-building-btn { background:#0a84ff; border:2px solid #0a84ff; color:#fff;
-    font-size:18px; width:36px; height:36px; border-radius:50%; cursor:pointer;
+    font-size:16px; width:32px; height:32px; border-radius:50%; cursor:pointer;
     display:none; align-items:center; justify-content:center; font-family:inherit;
     -webkit-appearance:none; appearance:none; }
   #gallery-building-btn.visible { display:flex; }
-  #building-filter-bar { display:flex; flex-direction:row; gap:6px; overflow-x:auto;
-    max-width:calc(100vw - 180px); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  #building-filter-bar { display:flex; flex-direction:row; gap:5px; overflow-x:auto;
+    max-width:calc(100vw - 160px); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   #building-filter-bar:empty { display:none; }
   #building-filter-bar::-webkit-scrollbar { display:none; }
+  /* ── Top-center (current project) ── */
+  #project-center { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
+    transform:translateX(-50%); z-index:89; display:flex; flex-direction:column;
+    align-items:center; gap:3px; }
+  /* ── Top-right (exit app) ── */
+  #exit-app { position:fixed; top:env(safe-area-inset-top, 10px); right:10px; z-index:90;
+    background:#0a84ff; border:2px solid #0a84ff; color:#fff; font-size:13px; font-weight:700;
+    padding:8px 14px; border-radius:18px; white-space:nowrap; line-height:1.2;
+    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
 
   /* #new-project-btn (the old "+" icon in the top-right corner) has been removed —
      it duplicated #create-project-pill below, just in a smaller/less discoverable form. */
 
   /* ---------- "Current Project" and "Create New Project" live in the top-right corner,
      matching the Exit App button on the top-left. ---------- */
-  #project-corner { position:fixed; top:env(safe-area-inset-top, 10px); right:22px;
-    z-index:90; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-  #project-top-row { display:flex; flex-direction:row; gap:6px; align-items:center; }
-  #photo-count { color:#fff; font-size:11px; font-weight:700; background:rgba(255,255,255,.15);
-    border-radius:8px; padding:3px 7px; white-space:nowrap; display:none; }
+  #photo-count { color:#aaa; font-size:11px; font-weight:600; white-space:nowrap;
+    display:none; text-align:center; }
   #photo-count.visible { display:block; }
-  #project-banner, #create-project-pill { display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:1px; background:#0a84ff; border:none;
-    border-radius:10px; padding:6px 12px; color:#fff; font-size:12px; font-weight:700;
-    cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none;
-    min-width:0; max-width:44vw; }
+  #project-banner { display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:1px; background:#0a84ff; border:none; border-radius:10px;
+    padding:6px 12px; color:#fff; font-size:12px; font-weight:700; cursor:pointer;
+    font-family:inherit; -webkit-appearance:none; appearance:none; max-width:44vw; }
   #project-banner.hidden { display:none; }
   #project-banner-label, .pill-label { font-size:8px; font-weight:700; letter-spacing:.07em;
     text-transform:uppercase; color:rgba(255,255,255,.75); }
@@ -440,8 +443,8 @@
   #folders-search { width:100%; background:#2c2c2e; border:none; color:#fff; padding:10px 12px;
     border-radius:8px; font-size:15px; }
 
-  .bldg-pill { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid #444;
-    background:#2a2a2c; color:#aaa; font-size:13px; font-weight:600; white-space:nowrap; }
+  .bldg-pill { flex-shrink:0; padding:4px 10px; border-radius:14px; border:2px solid #444;
+    background:#2a2a2c; color:#aaa; font-size:12px; font-weight:600; white-space:nowrap; }
   .bldg-pill.active { background:#0a84ff; border-color:#0a84ff; color:#fff; }
   .bldg-pill.assign-ready { border-color:#30d158; color:#30d158; }
   #bldg-create-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px dashed #555;
@@ -566,19 +569,17 @@
     padding:8px 6px 10px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
   #gallery-header-actions { display:flex; align-items:center; gap:6px; width:100%; }
   /* ── Gallery action menu ── */
-  #gallery-top-center { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
-    transform:translateX(-50%); z-index:89; display:flex; align-items:center; gap:6px; }
-  #gallery-top-center #gallery-search { width:25ch; background:#0a84ff; border:1px solid #0055d4;
-    color:#fff; padding:8px 10px; border-radius:10px; font-size:13px; font-family:inherit; }
-  #gallery-top-center #gallery-search::placeholder { color:rgba(255,255,255,.7); }
+  #gallery-search { width:20ch; background:#0a84ff; border:1px solid #0055d4;
+    color:#fff; padding:7px 9px; border-radius:10px; font-size:13px; font-family:inherit; }
+  #gallery-search::placeholder { color:rgba(255,255,255,.7); }
   .gallery-menu-wrap { position:relative; }
   #gallery-menu-btn { background:#0a84ff; color:#fff; border:1px solid #0055d4; border-radius:10px;
     padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
     -webkit-appearance:none; appearance:none; white-space:nowrap; }
   #gallery-menu-btn.menu-open { background:#0060c0; }
-  #gallery-menu-dropdown { display:none; position:absolute; top:calc(100% + 6px); left:50%;
-    transform:translateX(-50%); background:#1c1c1e; border:1px solid #444; border-radius:12px;
-    padding:8px; z-index:89; min-width:220px; flex-direction:column; gap:4px;
+  #gallery-menu-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0;
+    background:#1c1c1e; border:1px solid #444; border-radius:12px;
+    padding:8px; z-index:89; width:18ch; flex-direction:column; gap:4px;
     box-shadow:0 8px 28px rgba(0,0,0,.6); }
   #gallery-menu-dropdown.open { display:flex; }
   #gallery-menu-dropdown > button,
@@ -638,8 +639,8 @@
   #empty-state { color:#777; text-align:center; padding:60px 20px; font-size:14px; }
 
   /* ---------- Bulk delete bar ---------- */
-  #bulk-bar { display:none; flex-direction:column; gap:8px;
-    background:#1c1c1e; border-radius:12px; padding:10px 14px; margin-bottom:10px; }
+  #bulk-bar { display:none; flex-direction:column; gap:5px;
+    background:#1c1c1e; border-radius:10px; padding:6px 10px; margin-bottom:6px; }
   #bulk-bar.active { display:flex; }
   #bulk-count { font-size:14px; color:#ddd; font-weight:600; }
   #bulk-bar-actions { display:flex; flex-wrap:wrap; gap:6px; }
@@ -915,51 +916,47 @@
 <body>
 <div id="app" class="hidden">
 
+    <!-- Top-left: menu + search + building btn -->
   <div id="top-left-group">
     <div id="top-left-row">
-      <button id="exit-app" title="Exit app">Exit App</button>
+      <div class="gallery-menu-wrap">
+        <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
+        <div id="gallery-menu-dropdown">
+          <button id="select-btn">Select</button>
+          <button id="reorder-btn">Rearrange Photos</button>
+          <button id="pdf-all-btn" disabled>Create Report</button>
+          <button id="attach-doc-btn">Attach PDF</button>
+          <button id="backup-btn" disabled>Backup to Phone</button>
+          <button id="drive-sync-btn" disabled>Sync to Drive</button>
+          <button id="drive-pull-btn">Pull from Drive</button>
+          <button id="drive-link-btn">Send Link</button>
+          <div class="export-btn-wrap">
+            <button id="export-btn" disabled>Export / Zip</button>
+            <div id="export-quality-menu">
+              <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
+              <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
+            </div>
+          </div>
+          <button id="account-btn">Account</button>
+        </div>
+      </div>
+      <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
       <button id="gallery-building-btn" title="Manage buildings">🏢</button>
     </div>
-  </div>
-  <div id="project-corner">
-    <div id="project-top-row">
-      <span id="photo-count"></span>
-      <button id="project-banner" class="hidden" title="Switch project">
-        <span id="project-banner-label">Current Project</span>
-        <span id="project-banner-name">Project</span>
-      </button>
-      <button id="create-project-pill" title="Create new project">
-        <span class="pill-label">New Project</span>
-        <span class="pill-name">+ Create</span>
-      </button>
-    </div>
+    <div id="building-filter-bar"></div>
   </div>
 
-  <!-- Fixed top-center: search + gallery menu -->
-  <div id="gallery-top-center">
-    <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
-    <div class="gallery-menu-wrap">
-      <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
-      <div id="gallery-menu-dropdown">
-        <button id="select-btn">Select</button>
-        <button id="reorder-btn">Rearrange Photos</button>
-        <button id="pdf-all-btn" disabled>Create Report</button>
-        <button id="attach-doc-btn">Attach PDF</button>
-        <button id="backup-btn" disabled>Backup to Phone</button>
-        <button id="drive-sync-btn" disabled>Sync to Drive</button>
-        <button id="drive-pull-btn">Pull from Drive</button>
-        <button id="drive-link-btn">Send Link</button>
-        <div class="export-btn-wrap">
-          <button id="export-btn" disabled>Export / Zip</button>
-          <div id="export-quality-menu">
-            <button id="export-quality-standard" type="button">Standard<span class="export-quality-sub">Smaller file, good for email</span></button>
-            <button id="export-quality-full" type="button">Full Quality<span class="export-quality-sub">Original resolution, larger file</span></button>
-          </div>
-        </div>
-        <button id="account-btn">Account</button>
-      </div>
-    </div>
+  <!-- Top-center: current project -->
+  <div id="project-center">
+    <button id="project-banner" title="Switch / create project">
+      <span id="project-banner-label">Current Project</span>
+      <span id="project-banner-name">Select project</span>
+    </button>
+    <span id="photo-count"></span>
   </div>
+
+  <!-- Top-right: exit app -->
+  <button id="exit-app" title="Exit app">Exit App</button>
 
   <div id="camera-view">
     <video id="preview" autoplay playsinline muted disablePictureInPicture x-webkit-airplay="deny"></video>
