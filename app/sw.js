@@ -1,6 +1,6 @@
 // Minimal service worker: caches app shell so the app still opens offline.
 // Camera/mic/speech still require the page to be open; photo data lives in IndexedDB, not the cache.
-const CACHE = 'photo-namer-v190';
+const CACHE = 'photo-namer-v191';
 const ASSETS = ['./', './index.html', './app.js', './manifest.json', './icon.png'];
 
 self.addEventListener('install', (event) => {

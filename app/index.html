@@ -397,39 +397,22 @@
   /* #new-project-btn (the old "+" icon in the top-right corner) has been removed —
      it duplicated #create-project-pill below, just in a smaller/less discoverable form. */
 
-  /* ---------- "Current Project" and "Create New Project" now live INSIDE the tab bar
-     on phones, sized and styled exactly like the Camera/Gallery tabs (flex:1, same
-     dark pill look) instead of floating as separate blue pills up top — that's what
-     was making the camera screen feel crowded. Base rules below give them the plain
-     tab-bar look by default. The desktop override further down restores the original
-     fixed-position blue-pill treatment for larger screens, where there's room for it
-     and the tab bar isn't the primary nav. ---------- */
-  #project-banner, #create-project-pill { flex:1; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:2px; background:#1c1c1e;
-    border:1px solid #333; border-radius:12px; color:#aaa; padding:10px 0;
-    font-size:13px; font-weight:700; cursor:pointer;
-    font-family:inherit; -webkit-appearance:none; appearance:none; }
+  /* ---------- "Current Project" and "Create New Project" live in the top-right corner,
+     matching the Exit App button on the top-left. ---------- */
+  #project-corner { position:fixed; top:env(safe-area-inset-top, 10px); right:10px;
+    z-index:90; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+  #project-banner, #create-project-pill { display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:1px; background:#0a84ff; border:none;
+    border-radius:10px; padding:6px 12px; color:#fff; font-size:12px; font-weight:700;
+    cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none;
+    min-width:0; max-width:44vw; }
   #project-banner.hidden { display:none; }
-  /* .pill-label/.pill-name are shared by both Current Project and Create New Project so
-     they read as one matched pair — Create New Project used to be a bare "+" plus a single
-     run-on label with no two-tier hierarchy, which made it look visually distinct from
-     Current Project's small-label-over-bold-name treatment. Kept on the original IDs too
-     (instead of just renaming to classes) since project-banner-label/name are also looked
-     up by id in app.js to fill in the active project's name. */
   #project-banner-label, .pill-label { font-size:8px; font-weight:700; letter-spacing:.07em;
-    text-transform:uppercase; color:#888; }
-  #project-banner-name, .pill-name { display:block; color:#eee; font-size:12px; font-weight:800;
-    letter-spacing:-.01em; max-width:20vw; overflow:hidden; text-overflow:ellipsis;
-    white-space:nowrap; text-align:center; }
-  /* Current Project carries the active project name, so it gets a bigger share of the
-     tab bar than the other three (which are icon/short-label only). */
-  #tabbar #project-banner { flex:1.7; }
-  /* Gallery, Current Project, and Create New Project now match Camera's blue so the tab
-     bar reads as one consistent set instead of one blue tab among three dark ones. */
-  #tabbar #tab-gallery, #tabbar #project-banner, #tabbar #create-project-pill {
-    background:#0a84ff; border-color:#0a84ff; color:#fff; }
-  #tabbar #project-banner-label, #tabbar .pill-label { color:rgba(255,255,255,.85); }
-  #tabbar #project-banner-name, #tabbar .pill-name { color:#fff; }
+    text-transform:uppercase; color:rgba(255,255,255,.75); }
+  #project-banner-name, .pill-name { display:block; color:#fff; font-size:12px; font-weight:800;
+    letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; text-align:center; max-width:42vw; }
+  #tabbar #tab-gallery { background:#0a84ff; border-color:#0a84ff; color:#fff; }
 
   /* ---------- "Select Existing Project" pill (desktop only — see phone media query
      below; on phones the Current Project tab does the same job, so it's hidden). ---------- */
@@ -445,22 +428,7 @@
     font-family:inherit; -webkit-appearance:none; appearance:none; }
   #select-project-pill.hidden { display:none; }
 
-  /* ---------- Desktop: pull Current Project / Create New Project back out of the tab
-     bar into the original floating blue pills. Selector specificity here is bumped
-     with the #tabbar ancestor so it reliably wins over the plain tab-bar look above. ---------- */
-  @media (min-width: 601px) {
-    #tabbar #project-banner, #tabbar #create-project-pill { position:fixed; flex:0 0 auto;
-      display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap;
-      min-height:54px; box-sizing:border-box; border:none; border-radius:24px; padding:10px 16px;
-      background:#0a84ff; color:#fff; box-shadow:0 4px 16px rgba(10,132,255,.45);
-      font-size:13px; font-weight:700; z-index:89; }
-    #tabbar #create-project-pill { top:calc(env(safe-area-inset-top, 10px) + 48px);
-      left:50%; transform:translateX(-50%); flex-direction:column; gap:1px; }
-    #tabbar #project-banner { top:calc(env(safe-area-inset-top, 10px) + 48px); left:10px;
-      max-width:46vw; min-width:0; flex-direction:column; gap:1px; }
-    #tabbar #project-banner-label, #tabbar .pill-label { color:rgba(255,255,255,.85); font-size:9px; }
-    #tabbar #project-banner-name, #tabbar .pill-name { color:#fff; font-size:16px; max-width:42vw; }
-  }
+
 
   /* ---------- Folders modal ---------- */
   #folders-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
@@ -598,8 +566,7 @@
   #gallery-view { flex:1; overflow-y:auto; padding:10px; display:none; background:#0a0a0a; }
   #gallery-view.active { display:block; }
   #gallery-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;
-    padding:8px 6px 14px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 156px); }
-  #gallery-header h1 { font-size:20px; margin:0; flex:0 0 100%; }
+    padding:8px 6px 14px; gap:8px; margin-top:calc(env(safe-area-inset-top, 10px) + 55px); }
   #gallery-header-actions { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
   #export-btn, #select-btn, #reorder-btn, #pdf-all-btn, #attach-doc-btn, #backup-btn, #drive-sync-btn, #drive-pull-btn, #drive-link-btn, #account-btn { background:#0a84ff; color:#fff; border:none; border-radius:10px; padding:7px 10px; font-size:12.5px; font-weight:600; flex:1 1 auto; text-align:center; }
   #export-btn:disabled, #pdf-all-btn:disabled, #backup-btn:disabled, #drive-sync-btn:disabled { background:#333; color:#777; }
@@ -929,6 +896,16 @@
 <div id="app" class="hidden">
 
   <button id="exit-app" title="Exit app">Exit App</button>
+  <div id="project-corner">
+    <button id="create-project-pill" title="Create new project">
+      <span class="pill-label">New Project</span>
+      <span class="pill-name">+ Create</span>
+    </button>
+    <button id="project-banner" class="hidden" title="Switch project">
+      <span id="project-banner-label">Current Project</span>
+      <span id="project-banner-name">Project</span>
+    </button>
+  </div>
 
   <div id="top-pill-row-2">
     <button id="select-project-pill" class="hidden" title="Select existing project"><span>Select Existing Project</span></button>
@@ -1079,7 +1056,6 @@
 
   <div id="gallery-view">
     <div id="gallery-header">
-      <h1>Photos</h1>
       <div id="gallery-header-actions">
         <button id="select-btn">Select</button>
         <button id="reorder-btn" title="Drag photos to rearrange">Reorder</button>
@@ -1126,14 +1102,6 @@
   </div>
 
   <div id="tabbar">
-    <button id="create-project-pill" title="Create new project">
-      <span class="pill-label">New Project</span>
-      <span class="pill-name">+ Create</span>
-    </button>
-    <button id="project-banner" class="hidden" title="Switch project">
-      <span id="project-banner-label">Current Project</span>
-      <span id="project-banner-name">Project</span>
-    </button>
     <button id="tab-camera" class="active"><span class="tab-icon">📷</span>Camera</button>
     <button id="tab-gallery"><span class="tab-icon">🖼️</span>Gallery</button>
   </div>
