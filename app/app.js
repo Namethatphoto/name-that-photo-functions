@@ -252,6 +252,7 @@
     bulkMoveBuilding: document.getElementById('bulk-move-building'),
     bulkMoveProject: document.getElementById('bulk-move-project'),
     bulkPdf: document.getElementById('bulk-pdf'),
+    bulkDownload: document.getElementById('bulk-download'),
     bulkShare: document.getElementById('bulk-share'),
     bulkDelete: document.getElementById('bulk-delete'),
     renameModal: document.getElementById('rename-modal'),
@@ -3151,38 +3152,15 @@
           openDetail(rec);
         }
       });
-      // Desktop drag-to-filesystem: lets the user drag a photo out of the gallery
-      // and drop it onto the desktop or into any folder/app as a real file.
-      // - Filename encodes category + sublocation + building + voice label so the
-      //   file is self-describing on disk.
-      // - rec.blob is always the annotated (marked-up) version; originalBlob holds
-      //   the pre-markup original. We drag the annotated copy.
-      // - Only enabled outside reorder mode (reorder uses its own pointer-event drag).
-      // - DownloadURL is a Chrome/Edge extension to dataTransfer that triggers an OS
-      //   file-drop; Safari/Firefox ignore it gracefully.
-      if (!reorderMode) {
-        div.draggable = true;
-        div.addEventListener('dragstart', (e) => {
-          if (reorderMode) { e.preventDefault(); return; }
-          const mimeType = rec.blob.type || (rec.kind === 'pdf' ? 'application/pdf' : rec.kind === 'video' ? 'video/mp4' : 'image/jpeg');
-          const ext = rec.kind === 'pdf' ? 'pdf' : rec.kind === 'video' ? (mimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
-          // Build a descriptive filename from all available metadata fields
-          const parts = [];
-          if (rec.category && ['exterior', 'roof', 'interior'].includes(rec.category)) {
-            parts.push(rec.category === 'exterior' ? 'Exterior' : rec.category === 'roof' ? 'Roof' : 'Interior');
-            if (rec.subLocation) parts.push(rec.subLocation);
-          }
-          if (rec.building) parts.push(rec.building);
-          parts.push(rec.name || 'Photo');
-          const filename = sanitizeFilename(parts.join(' - ')) + '.' + ext;
-          const dragUrl = URL.createObjectURL(rec.blob);
-          e.dataTransfer.effectAllowed = 'copy';
-          e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${dragUrl}`);
-          div.addEventListener('dragend', () => URL.revokeObjectURL(dragUrl), { once: true });
-        });
-      }
       div.appendChild(img);
       div.appendChild(label);
+      if (rec.driveSynced) {
+        const cloudBadge = document.createElement('div');
+        cloudBadge.className = 'cloud-badge';
+        cloudBadge.title = 'Sent to Cloud';
+        cloudBadge.textContent = '☁';
+        div.appendChild(cloudBadge);
+      }
       if (rec.backedUp) {
         const badge = document.createElement('div');
         badge.className = 'backup-badge';
@@ -3354,6 +3332,7 @@
     els.bulkCount.textContent = n + ' selected';
     els.bulkDelete.disabled = n === 0;
     els.bulkPdf.disabled = n === 0;
+    els.bulkDownload.disabled = n === 0;
     els.bulkShare.disabled = n === 0;
     els.bulkCategorize.disabled = n === 0; // works on any number of selected photos, unlike rename
     els.bulkMoveBuilding.disabled = n === 0; // same — moving any number of photos at once is fine
@@ -6484,6 +6463,75 @@
       } catch (e) { /* user cancelled — nothing to do */ }
     } else {
       toast('Sharing files isn’t supported in this browser');
+    }
+  });
+
+  /* ---------------- Bulk Download ---------------- */
+  // Downloads selected photos/files to the computer.
+  // - 1 file: downloads directly with a descriptive filename.
+  // - 2+ files: bundles into a ZIP (JSZip is already loaded for Export All).
+  // Filename includes category + sublocation + building + voice label so files
+  // are self-describing on disk without needing to open them.
+  function buildDownloadFilename(rec, usedNames) {
+    const parts = [];
+    if (rec.category && ['exterior', 'roof', 'interior'].includes(rec.category)) {
+      parts.push(rec.category === 'exterior' ? 'Exterior' : rec.category === 'roof' ? 'Roof' : 'Interior');
+      if (rec.subLocation) parts.push(rec.subLocation);
+    }
+    if (rec.building) parts.push(rec.building);
+    parts.push(rec.name || 'Photo');
+    const base = sanitizeFilename(parts.join(' - '));
+    const ext = rec.kind === 'pdf' ? 'pdf' : rec.kind === 'video' ? (rec.blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
+    const count = usedNames.get(base) || 0;
+    usedNames.set(base, count + 1);
+    return count === 0 ? `${base}.${ext}` : `${base}_${count + 1}.${ext}`;
+  }
+
+  els.bulkDownload.addEventListener('click', async () => {
+    if (!selectedIds.size) return;
+    const allRecords = await dbGetAll();
+    const selected = allRecords.filter((r) => selectedIds.has(r.id));
+    if (!selected.length) return;
+    const usedNames = new Map();
+
+    if (selected.length === 1) {
+      // Single file — download directly
+      const rec = selected[0];
+      const filename = buildDownloadFilename(rec, usedNames);
+      const url = URL.createObjectURL(rec.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } else {
+      // Multiple files — bundle into a ZIP
+      const origText = els.bulkDownload.textContent;
+      els.bulkDownload.disabled = true;
+      els.bulkDownload.textContent = 'Zipping…';
+      try {
+        const zip = new JSZip();
+        for (const rec of selected) {
+          zip.file(buildDownloadFilename(rec, usedNames), rec.blob);
+        }
+        const content = await zip.generateAsync({ type: 'blob' });
+        const stamp = new Date().toISOString().slice(0, 10);
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `selected-photos-${stamp}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (err) {
+        toast('Download failed — try again');
+      } finally {
+        els.bulkDownload.disabled = false;
+        els.bulkDownload.textContent = origText;
+      }
     }
   });
 

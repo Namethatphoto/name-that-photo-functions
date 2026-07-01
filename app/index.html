@@ -389,7 +389,7 @@
     z-index:90; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
   body.camera-active #top-left-group,
   body.camera-active #project-center,
-  body.camera-active #exit-app { display:none !important; }
+  body.camera-active #top-right-group { display:none !important; }
   #top-left-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
 
   #building-filter-bar { display:flex; flex-direction:row; gap:5px; overflow-x:auto;
@@ -400,9 +400,10 @@
   #project-center { position:fixed; top:env(safe-area-inset-top, 10px); left:50%;
     transform:translateX(-50%); z-index:89; display:flex; flex-direction:column;
     align-items:center; gap:3px; }
-  /* ── Top-right (exit app) ── */
-  #exit-app { position:fixed; top:env(safe-area-inset-top, 10px); right:10px; z-index:90;
-    background:#0a84ff; border:2px solid #0a84ff; color:#fff; font-size:13px; font-weight:700;
+  /* ── Top-right (exit app + select) ── */
+  #top-right-group { position:fixed; top:env(safe-area-inset-top, 10px); right:10px; z-index:90;
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  #exit-app { background:#0a84ff; border:2px solid #0a84ff; color:#fff; font-size:13px; font-weight:700;
     padding:8px 14px; border-radius:18px; white-space:nowrap; line-height:1.2;
     font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
 
@@ -597,8 +598,7 @@
   #gallery-menu-dropdown #reorder-btn.active { background:#fff; color:#0a84ff; }
   #select-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
     padding:8px 13px; font-size:13px; font-weight:600; white-space:nowrap;
-    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer;
-    margin-left:10px; }
+    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
   #select-btn.active { background:#fff; color:#0a84ff; border-color:#fff; }
   #gallery-menu-dropdown .export-btn-wrap { width:100%; }
   /* Export quality popover — folds "Save Originals" into the Export/Zip button as a choice,
@@ -633,6 +633,9 @@
   .thumb .backup-badge { position:absolute; bottom:4px; right:4px; width:18px; height:18px; border-radius:50%;
     background:#2ecc71; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center;
     justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); }
+  .thumb .cloud-badge { position:absolute; bottom:4px; left:4px; width:18px; height:18px; border-radius:50%;
+    background:#0a84ff; color:#fff; font-size:11px; display:flex; align-items:center;
+    justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); line-height:1; }
   #grid.select-mode .select-dot { display:block; }
   #grid.select-mode .del { display:none; }
   #grid.reorder-mode .del { display:none; }
@@ -657,8 +660,8 @@
   #bulk-bar.active { display:flex; }
   #bulk-count { font-size:14px; color:#ddd; font-weight:600; }
   #bulk-bar-actions { display:flex; flex-wrap:wrap; gap:6px; }
-  #select-all-btn, #bulk-rename, #bulk-markup, #bulk-crop, #bulk-remove-markup, #bulk-categorize, #bulk-move-building, #bulk-move-project, #bulk-pdf, #bulk-share { background:#2a2a2a; color:#fff; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
-  #bulk-rename:disabled, #bulk-markup:disabled, #bulk-crop:disabled, #bulk-remove-markup:disabled, #bulk-categorize:disabled, #bulk-move-building:disabled, #bulk-move-project:disabled, #bulk-pdf:disabled, #bulk-share:disabled { color:#666; }
+  #select-all-btn, #bulk-rename, #bulk-markup, #bulk-crop, #bulk-remove-markup, #bulk-categorize, #bulk-move-building, #bulk-move-project, #bulk-pdf, #bulk-share, #bulk-download { background:#2a2a2a; color:#fff; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
+  #bulk-rename:disabled, #bulk-markup:disabled, #bulk-crop:disabled, #bulk-remove-markup:disabled, #bulk-categorize:disabled, #bulk-move-building:disabled, #bulk-move-project:disabled, #bulk-pdf:disabled, #bulk-share:disabled, #bulk-download:disabled { color:#666; }
   #bulk-delete { background:#3a1414; color:#ff453a; border:none; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:600; }
   #bulk-delete:disabled { color:#666; }
 
@@ -957,7 +960,6 @@
           <button id="account-btn">👤 Account</button>
         </div>
       </div>
-      <button id="select-btn">☑️ Select</button>
     </div>
     <input id="gallery-search" type="text" placeholder="Search photos…" autocapitalize="words">
     <div id="building-filter-bar"></div>
@@ -972,8 +974,11 @@
     <span id="photo-count"></span>
   </div>
 
-  <!-- Top-right: exit app -->
-  <button id="exit-app" title="Exit app">Exit App</button>
+  <!-- Top-right: exit app + select -->
+  <div id="top-right-group">
+    <button id="exit-app" title="Exit app">Exit App</button>
+    <button id="select-btn">☑️ Select</button>
+  </div>
 
   <div id="camera-view">
     <video id="preview" autoplay playsinline muted disablePictureInPicture x-webkit-airplay="deny"></video>
@@ -1138,6 +1143,7 @@
         <button id="bulk-move-building" disabled title="Move the selected photos to a different building">Move to Building</button>
         <button id="bulk-move-project" disabled title="Move the selected photos to a different project">Move Project</button>
         <button id="bulk-pdf" disabled title="PDF report of selected photos">Create Report</button>
+        <button id="bulk-download" disabled title="Download selected photos to your computer">⬇️ Download</button>
         <button id="bulk-share" disabled title="Send the selected photos/videos (e.g. by text)">Send</button>
         <button id="bulk-delete" disabled>Delete</button>
       </div>
