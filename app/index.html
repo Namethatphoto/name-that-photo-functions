@@ -592,8 +592,11 @@
     -webkit-appearance:none; appearance:none; }
   #gallery-menu-dropdown > button:disabled,
   #gallery-menu-dropdown .export-btn-wrap #export-btn:disabled { background:#2c2c2e; color:#666; }
-  #gallery-menu-dropdown #select-btn.active,
   #gallery-menu-dropdown #reorder-btn.active { background:#fff; color:#0a84ff; }
+  #select-btn { background:#1c1c1e; color:#fff; border:1px solid #444; border-radius:10px;
+    padding:8px 13px; font-size:13px; font-weight:600; white-space:nowrap;
+    font-family:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
+  #select-btn.active { background:#fff; color:#0a84ff; border-color:#fff; }
   #gallery-menu-dropdown .export-btn-wrap { width:100%; }
   /* Export quality popover — folds "Save Originals" into the Export/Zip button as a choice,
      instead of a separate always-visible button, to save header space (task: combine export options). */
@@ -922,10 +925,10 @@
     <!-- Top-left: menu + search + building btn -->
   <div id="top-left-group">
     <div id="top-left-row">
+      <button id="select-btn">☑️ Select</button>
       <div class="gallery-menu-wrap">
         <button id="gallery-menu-btn" title="Gallery actions">≡ Menu</button>
         <div id="gallery-menu-dropdown">
-          <button id="select-btn">☑️ Select</button>
           <button id="reorder-btn">↕️ Rearrange Photos</button>
           <button id="pdf-all-btn" disabled>📄 Create Report</button>
           <button id="attach-doc-btn">📎 Attach PDF</button>
