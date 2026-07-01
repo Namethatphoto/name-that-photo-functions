@@ -777,13 +777,15 @@
   #pdf-preview-back { background:#3a3a3c; color:#fff; }
   #pdf-preview-send { background:#0a84ff; color:#fff; }
   #pdf-preview-send:disabled { background:#333; color:#777; }
-  /* Scrollable stack of full pages — each .pdf-preview-page is sized to exactly the
-     container's viewport (scroll-snap-align:start) so swiping/scrolling lands cleanly on
-     one full page at a time, the same feel as a native paginated viewer. */
+  /* Scrollable stack of rendered PDF pages. No scroll-snap — mandatory snap re-fires
+     when the visual viewport changes during a pinch-zoom gesture on iOS, causing the
+     page to jump back to the top. overscroll-behavior:contain prevents iOS PWA from
+     interpreting the horizontal component of a pinch gesture as a "swipe back"
+     navigation, which was the other cause of users being kicked out of the preview. */
   #pdf-preview-frame { flex:1; width:100%; overflow-y:auto; background:#444;
-    scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; }
-  .pdf-preview-page { width:100%; height:100%; display:flex; align-items:center;
-    justify-content:center; scroll-snap-align:start; box-sizing:border-box; }
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .pdf-preview-page { width:100%; display:flex; align-items:center;
+    justify-content:center; box-sizing:border-box; padding:12px 8px; }
   .pdf-preview-page canvas { background:#fff; box-shadow:0 1px 8px rgba(0,0,0,.4); }
   #pdf-preview-loading { color:#aaa; font-size:14px; text-align:center; padding:40px 20px; }
 

@@ -828,10 +828,24 @@
 
     const records = await getFolderPhotos(currentFolderId);
     if (!records.length) { toast('No photos in this project yet'); return; }
-    const pending = records.filter((r) => !r.driveSynced);
+    let pending = records.filter((r) => !r.driveSynced);
     if (!pending.length) {
-      alert(`All ${records.length} item${records.length === 1 ? '' : 's'} in this project are already synced to Drive.`);
-      return;
+      // All records are flagged synced locally — verify Drive still has the files.
+      // If the user deleted the project folder from Drive, we need to reset and re-upload.
+      if (!driveRootFolderId) driveRootFolderId = await ensureDriveFolder(DRIVE_ROOT_FOLDER_NAME, null, token);
+      const checkFolderId = await ensureDriveFolder(currentFolderName || 'Untitled Project', driveRootFolderId, token);
+      const driveFiles = await listDriveFilesInFolder(checkFolderId, token);
+      const driveFileIdSet = new Set(driveFiles.filter((f) => f.name !== '_metadata.json').map((f) => f.id));
+      const orphaned = records.filter((r) => r.driveFileId && !driveFileIdSet.has(r.driveFileId));
+      if (!orphaned.length) {
+        alert(`All ${records.length} item${records.length === 1 ? '' : 's'} in this project are already synced to Drive.`);
+        return;
+      }
+      // Reset orphaned records so the upload loop below re-sends them
+      for (const rec of orphaned) { rec.driveSynced = false; rec.driveFileId = null; }
+      await dbPutAll(orphaned);
+      toast(`Drive folder was deleted — re-syncing ${orphaned.length} item${orphaned.length === 1 ? '' : 's'}…`);
+      pending = orphaned;
     }
 
     els.driveSyncBtn.disabled = true;
@@ -6264,11 +6278,10 @@
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const baseViewport = page.getViewport({ scale: 1 });
-      // Leave a small margin so the page doesn't touch the screen edges.
-      const fitScale = Math.min(
-        (rect.width - 16) / baseViewport.width,
-        (rect.height - 16) / baseViewport.height
-      );
+      // Scale to fit the container width with a small margin. Pages scroll vertically
+      // rather than being forced to full-screen height — this avoids the iOS scroll-snap
+      // re-trigger bug that was kicking users out of the preview on pinch-zoom.
+      const fitScale = (rect.width - 16) / baseViewport.width;
       const viewport = page.getViewport({ scale: fitScale });
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width * outputScale);
