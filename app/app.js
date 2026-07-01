@@ -758,7 +758,14 @@
     if (autoSyncRunning) return;           // don't stack if previous run is still going
     if (!currentFolderId) return;          // no project selected
     const token = await getDriveAccessToken({ interactive: false });
-    if (!token) return;                    // not signed in — skip silently
+    if (!token) {
+      // Silent token failed — likely expired or never obtained this session.
+      // Nudge the user so they know auto-sync is stalled rather than working.
+      if (localStorage.getItem(DRIVE_CONNECTED_KEY) === '1') {
+        toast('☁️ Auto-Sync paused — tap Menu → Send to Cloud to reconnect Drive');
+      }
+      return;
+    }
     const records = await getFolderPhotos(currentFolderId);
     const pending = records.filter((r) => !r.driveSynced);
     if (!pending.length) return;           // nothing new to upload
@@ -825,9 +832,9 @@
     });
   }
 
-  function startAutoSync() {
+  function startAutoSync({ skipImmediate = false } = {}) {
     if (autoSyncTimer) clearInterval(autoSyncTimer);
-    autoSyncToDrive(); // run immediately on enable
+    if (!skipImmediate) autoSyncToDrive(); // run immediately on enable
     autoSyncTimer = setInterval(autoSyncToDrive, autoSyncIntervalMin * 60 * 1000);
   }
 
@@ -931,22 +938,36 @@
   const autoSyncBtn = document.getElementById('auto-sync-btn');
   if (autoSyncBtn) {
     applyAutoSyncToggle();
-    autoSyncBtn.addEventListener('click', () => {
-      autoSyncEnabled = !autoSyncEnabled;
-      localStorage.setItem(AUTO_SYNC_KEY, autoSyncEnabled ? '1' : '0');
-      applyAutoSyncToggle();
-      if (autoSyncEnabled) {
-        startAutoSync();
-        toast(`⏱️ Auto-Sync ON — uploads every ${autoSyncIntervalMin} minute${autoSyncIntervalMin === 1 ? '' : 's'} while app is open`);
-      } else {
-        stopAutoSync();
-        toast('⏱️ Auto-Sync OFF');
-      }
-      // Close dropdown
+    autoSyncBtn.addEventListener('click', async () => {
+      const turningOn = !autoSyncEnabled;
+      // Close dropdown first (keeps UI responsive while await runs below)
       const dd = document.getElementById('gallery-menu-dropdown');
       const mb = document.getElementById('gallery-menu-btn');
       if (dd) dd.classList.remove('open');
       if (mb) mb.classList.remove('menu-open');
+
+      if (turningOn) {
+        // Request an interactive token NOW, while we still have the user's tap
+        // gesture. iOS Safari revokes activation the moment the call stack yields,
+        // so this must be the first await. Caching the token here means the
+        // background timer can reuse it silently for up to ~1 hour.
+        const token = await getDriveAccessToken({ interactive: true });
+        if (!token) {
+          toast('⏱️ Auto-Sync requires Google Drive sign-in');
+          return; // leave auto-sync off
+        }
+        autoSyncEnabled = true;
+        localStorage.setItem(AUTO_SYNC_KEY, '1');
+        applyAutoSyncToggle();
+        startAutoSync(); // token is cached — immediate run will succeed
+        toast(`⏱️ Auto-Sync ON — uploads every ${autoSyncIntervalMin} minute${autoSyncIntervalMin === 1 ? '' : 's'} while app is open`);
+      } else {
+        autoSyncEnabled = false;
+        localStorage.setItem(AUTO_SYNC_KEY, '0');
+        applyAutoSyncToggle();
+        stopAutoSync();
+        toast('⏱️ Auto-Sync OFF');
+      }
     });
   }
 
@@ -964,8 +985,10 @@
     });
   });
 
-  // Resume auto-sync if it was on before
-  if (autoSyncEnabled) startAutoSync();
+  // Resume auto-sync if it was on before. Skip the immediate run on page load —
+  // the in-memory token is gone after a reload, so the first timer tick will
+  // attempt a silent refresh; if that fails it shows the reconnect toast.
+  if (autoSyncEnabled) startAutoSync({ skipImmediate: true });
   if (els.dskActionDrive) els.dskActionDrive.addEventListener('click', syncFolderToDrive);
   updateDriveStatusUI();
 
