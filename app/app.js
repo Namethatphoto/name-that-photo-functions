@@ -2862,7 +2862,8 @@
       if (catKey) {
         const chip = document.createElement('span');
         chip.className = 'cat-chip ' + catKey;
-        chip.textContent = catKey === 'exterior' ? 'EXT' : catKey === 'roof' ? 'ROOF' : 'INT';
+        const catAbbr = catKey === 'exterior' ? 'EXT' : catKey === 'roof' ? 'ROOF' : 'INT';
+        chip.textContent = rec.subLocation ? `${catAbbr} · ${rec.subLocation}` : catAbbr;
         label.appendChild(chip);
       }
       const nameText = document.createTextNode(rec.building ? `[${rec.building}] ${rec.name}` : rec.name);
