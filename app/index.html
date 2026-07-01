@@ -630,12 +630,15 @@
   .thumb.selected .select-dot { background:#0a84ff; border-color:#0a84ff; }
   .thumb.selected .select-dot::after { content:'✓'; color:#fff; font-size:13px; font-weight:700;
     display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
-  .thumb .backup-badge { position:absolute; bottom:4px; right:4px; width:18px; height:18px; border-radius:50%;
+  /* Cloud badge (bottom-right); backup badge stacks above it when both present */
+  .thumb .cloud-badge { position:absolute; bottom:4px; right:4px; width:18px; height:18px; border-radius:50%;
+    color:#fff; font-size:11px; display:flex; align-items:center;
+    justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); line-height:1;
+    background:#0a84ff; cursor:default; }
+  .thumb .cloud-badge.unsaved { background:#555; }
+  .thumb .backup-badge { position:absolute; bottom:26px; right:4px; width:18px; height:18px; border-radius:50%;
     background:#2ecc71; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center;
     justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); }
-  .thumb .cloud-badge { position:absolute; bottom:4px; left:4px; width:18px; height:18px; border-radius:50%;
-    background:#0a84ff; color:#fff; font-size:11px; display:flex; align-items:center;
-    justify-content:center; box-shadow:0 0 0 1px rgba(0,0,0,.35); line-height:1; }
   #grid.select-mode .select-dot { display:block; }
   #grid.select-mode .del { display:none; }
   #grid.reorder-mode .del { display:none; }

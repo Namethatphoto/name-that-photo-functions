@@ -3154,13 +3154,11 @@
       });
       div.appendChild(img);
       div.appendChild(label);
-      if (rec.driveSynced) {
-        const cloudBadge = document.createElement('div');
-        cloudBadge.className = 'cloud-badge';
-        cloudBadge.title = 'Sent to Cloud';
-        cloudBadge.textContent = '☁';
-        div.appendChild(cloudBadge);
-      }
+      const cloudBadge = document.createElement('div');
+      cloudBadge.className = rec.driveSynced ? 'cloud-badge' : 'cloud-badge unsaved';
+      cloudBadge.title = rec.driveSynced ? 'Saved to Cloud' : 'Not Saved to Cloud';
+      cloudBadge.textContent = '☁';
+      div.appendChild(cloudBadge);
       if (rec.backedUp) {
         const badge = document.createElement('div');
         badge.className = 'backup-badge';
@@ -4529,7 +4527,8 @@
       }
       const content = await zip.generateAsync({ type: 'blob' });
       const stamp = new Date().toISOString().slice(0, 10);
-      const namePart = fullQuality ? 'inspection-photos-originals' : 'inspection-photos';
+      const projectPart = currentFolderName ? sanitizeFilename(currentFolderName) : 'inspection-photos';
+      const namePart = fullQuality ? `${projectPart}-originals` : projectPart;
       const zipFile = new File([content], `${namePart}-${stamp}.zip`, { type: 'application/zip' });
 
       if (canUseFileShareSheet([zipFile])) {
@@ -6521,7 +6520,8 @@
         const url = URL.createObjectURL(content);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `selected-photos-${stamp}.zip`;
+        const projectPart = currentFolderName ? sanitizeFilename(currentFolderName) : 'photos';
+        a.download = `${projectPart}-${stamp}.zip`;
         document.body.appendChild(a);
         a.click();
         a.remove();
