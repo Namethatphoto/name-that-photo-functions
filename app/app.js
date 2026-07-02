@@ -5047,11 +5047,12 @@
         const logoX = pos === 'center' ? (pageW - w) / 2
                     : pos === 'right'  ? pageW - margin - w
                     : margin;
-        doc.addImage(pngDataUrl, 'PNG', logoX, margin, w, h);
+        const logoTopY = 10; // sit just below the 5pt accent bar, near the top of the page
+        doc.addImage(pngDataUrl, 'PNG', logoX, logoTopY, w, h);
         if (pos === 'right') {
           logoRenderH = h; // title will start below the right-placed logo
         } else {
-          y += h + 16;    // left/center: advance both columns below the logo
+          y = logoTopY + h + 16; // left/center: advance both columns below the logo
         }
       } catch (err) { console.error(err); }
     }
@@ -5098,8 +5099,8 @@
     doc.setTextColor(...PDF_ACCENT);
     const titleMaxW = Math.max(pageW - margin * 2 - 220, 140);
     const titleLines = doc.splitTextToSize(title || 'Photo Report', titleMaxW);
-    // If logo is right-positioned, push title below the logo height so they don't overlap
-    let titleY = (logoRenderH > 0) ? margin + logoRenderH + 8 : margin + 16;
+    // If logo is right-positioned, push title below the logo (logo starts at logoTopY=10)
+    let titleY = (logoRenderH > 0) ? 10 + logoRenderH + 8 : margin + 16;
     titleLines.forEach((line) => {
       doc.text(line, pageW - margin, titleY, { align: 'right' });
       titleY += 24;
@@ -7278,9 +7279,11 @@
   async function completeSetup() {
     if (!els.setupWizard) return;
     els.setupWizard.classList.add('hidden');
-    // Mark setup complete in Firestore so the wizard never shows again
-    if (currentFirebaseUser && typeof window.fbUpdateUserDoc === 'function') {
-      try { await window.fbUpdateUserDoc(currentFirebaseUser.uid, { setupComplete: true }); } catch (e) {}
+    // Mark setup complete in the company profile subcollection (writable by the client).
+    // The root users/{uid} doc is written only by the Stripe webhook and may be read-only
+    // under Firestore rules, so we store this flag where we know writes succeed.
+    if (currentFirebaseUser && typeof window.fbSetCompanyProfile === 'function') {
+      try { await window.fbSetCompanyProfile(currentFirebaseUser.uid, { setupComplete: true }); } catch (e) {}
     }
     // Also persist locally so it's instant on next load
     if (currentFirebaseUser) localStorage.setItem('pn_setupDone_' + currentFirebaseUser.uid, '1');
@@ -7403,9 +7406,11 @@
       }
       // Load cloud-saved company/inspector profile and merge into localStorage so PDF
       // fields populate correctly even after the browser cache has been cleared.
+      // Also used below to check setupComplete (stored in the profile subcollection).
+      let cloudProfile = null;
       if (typeof window.fbGetCompanyProfile === 'function') {
         try {
-          const cloudProfile = await window.fbGetCompanyProfile(user.uid);
+          cloudProfile = await window.fbGetCompanyProfile(user.uid);
           if (cloudProfile) savePdfPrefs(Object.assign(loadPdfPrefs(), cloudProfile));
         } catch (e) { /* ignore — localStorage values serve as fallback */ }
       }
@@ -7413,9 +7418,12 @@
       els.authPassword.value = '';
       if (hasAccess(currentUserDoc)) {
         showAppScreen();
-        // Show setup wizard on first sign-in (no setupComplete flag AND no local override)
+        // Show setup wizard on first sign-in.
+        // setupComplete is stored in the company profile subcollection (client-writable).
+        // localDone is a same-device fast-path that survives sign-out but not cache clears.
         const localDone = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
-        if (!currentUserDoc?.setupComplete && !localDone) {
+        const cloudDone = cloudProfile?.setupComplete === true;
+        if (!cloudDone && !localDone) {
           showSetupWizard();
         }
       } else {
