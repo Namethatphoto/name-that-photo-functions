@@ -354,6 +354,11 @@
     setupCompanyStateInput: document.getElementById('setup-company-state-input'),
     setupCompanyZipInput: document.getElementById('setup-company-zip-input'),
     setupContactInput: document.getElementById('setup-contact-input'),
+    setupLogoPick: document.getElementById('setup-logo-pick'),
+    setupLogoClear: document.getElementById('setup-logo-clear'),
+    setupLogoFile: document.getElementById('setup-logo-file'),
+    setupLogoPreview: document.getElementById('setup-logo-preview'),
+    setupLogoPreviewImg: document.getElementById('setup-logo-preview-img'),
     setupInspectorInput: document.getElementById('setup-inspector-input'),
     setupLicenseInput: document.getElementById('setup-license-input'),
     setupInspectorPhoneInput: document.getElementById('setup-inspector-phone-input'),
@@ -6011,6 +6016,8 @@
   }
   attachPhoneFormatting(pdfEls.ownerPhoneInput);
   attachPhoneFormatting(pdfEls.inspectorPhoneInput);
+  attachPhoneFormatting(els.setupInspectorPhoneInput);
+  attachPhoneFormatting(els.stgInspectorPhoneInput);
 
   // "Scan policy/estimate to autofill" — reads a photographed/scanned PDF (declarations
   // page, repair estimate) via a server-side Claude call and fills the policyholder/
@@ -7157,6 +7164,32 @@
   /* ================================================================
      SETUP WIZARD (first-run onboarding)
      ================================================================ */
+  let setupLogoDataUrl = null;
+
+  function applySetupLogoPreview() {
+    if (!els.setupLogoPreview || !els.setupLogoPreviewImg) return;
+    if (setupLogoDataUrl) {
+      els.setupLogoPreviewImg.src = setupLogoDataUrl;
+      els.setupLogoPreview.classList.remove('hidden');
+    } else {
+      els.setupLogoPreview.classList.add('hidden');
+      els.setupLogoPreviewImg.src = '';
+    }
+  }
+
+  if (els.setupLogoPick) els.setupLogoPick.addEventListener('click', () => els.setupLogoFile?.click());
+  if (els.setupLogoFile) {
+    els.setupLogoFile.addEventListener('change', () => {
+      const f = els.setupLogoFile.files[0]; if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => { setupLogoDataUrl = ev.target.result; applySetupLogoPreview(); };
+      reader.readAsDataURL(f);
+    });
+  }
+  if (els.setupLogoClear) {
+    els.setupLogoClear.addEventListener('click', () => { setupLogoDataUrl = null; applySetupLogoPreview(); });
+  }
+
   function updateSetupDriveStatusUI() {
     if (!els.setupDriveStatusText) return;
     const connected = !!driveAccessToken || localStorage.getItem(DRIVE_CONNECTED_KEY) === '1';
@@ -7175,6 +7208,8 @@
     if (els.setupCompanyStateInput) els.setupCompanyStateInput.value = prefs.companyState || '';
     if (els.setupCompanyZipInput) els.setupCompanyZipInput.value = prefs.companyZip || '';
     if (els.setupContactInput) els.setupContactInput.value = prefs.companyContact || '';
+    setupLogoDataUrl = prefs.logoDataUrl || null;
+    applySetupLogoPreview();
     if (els.setupInspectorInput) els.setupInspectorInput.value = prefs.inspectorName || '';
     if (els.setupLicenseInput) els.setupLicenseInput.value = prefs.licenseNumber || '';
     if (els.setupInspectorPhoneInput) els.setupInspectorPhoneInput.value = prefs.inspectorPhone || '';
@@ -7211,6 +7246,7 @@
         licenseNumber: (els.setupLicenseInput?.value || '').trim(),
         inspectorPhone: (els.setupInspectorPhoneInput?.value || '').trim(),
         inspectorEmail: (els.setupInspectorEmailInput?.value || '').trim(),
+        logoDataUrl: setupLogoDataUrl || null,
       };
       savePdfPrefs(Object.assign(loadPdfPrefs(), prefs));
       saveCompanyProfileToFirestore(prefs); // async, no need to await

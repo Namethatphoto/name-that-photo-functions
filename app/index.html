@@ -110,6 +110,14 @@
   #setup-drive-disconnect-btn { background:#2c2c2e; color:#ccc; border:none; border-radius:8px;
     padding:6px 10px; font-size:12px; font-weight:600; }
   #setup-drive-disconnect-btn.hidden { display:none; }
+  #setup-logo-row { display:flex; gap:8px; }
+  #setup-logo-pick { background:#1c1c1e; color:#fff; border:1px solid #3a3a3c;
+    border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; font-family:inherit; }
+  #setup-logo-clear { background:none; border:none; color:#ff453a;
+    font-size:13px; font-weight:600; padding:10px 0; font-family:inherit; }
+  #setup-logo-preview { margin-top:6px; }
+  #setup-logo-preview.hidden { display:none; }
+  #setup-logo-preview img { max-height:64px; max-width:200px; object-fit:contain; border-radius:4px; }
   #setup-skip-drive { background:none; border:none; color:#555; font-size:13px;
     padding:6px 0; text-align:center; width:100%; font-family:inherit; }
 
@@ -1341,6 +1349,14 @@
 
       <div class="setup-field-label">Company contact (phone / email)</div>
       <input id="setup-contact-input" class="setup-input" type="text" placeholder="Optional">
+
+      <div class="setup-field-label">Company logo</div>
+      <div id="setup-logo-row">
+        <button id="setup-logo-pick" type="button">📷 Choose image</button>
+        <button id="setup-logo-clear" type="button">Remove</button>
+      </div>
+      <input id="setup-logo-file" type="file" accept="image/*" class="hidden">
+      <div id="setup-logo-preview" class="hidden"><img id="setup-logo-preview-img" alt="logo"></div>
 
       <div class="setup-field-label">Inspector name</div>
       <input id="setup-inspector-input" class="setup-input" type="text" placeholder="Optional" autocapitalize="words">
