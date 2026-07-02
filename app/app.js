@@ -6,9 +6,10 @@
 
   /* ---------------- IndexedDB storage ---------------- */
   const DB_NAME = 'photo-namer-db';
-  const DB_VERSION = 2; // v2 adds the "folders" store for per-property organization
+  const DB_VERSION = 3; // v3 adds the "settings" store for key-value app state
   const STORE = 'photos';
   const FOLDERS_STORE = 'folders';
+  const SETTINGS_STORE = 'settings';
   let db;
 
   function openDB() {
@@ -22,9 +23,35 @@
         if (!d.objectStoreNames.contains(FOLDERS_STORE)) {
           d.createObjectStore(FOLDERS_STORE, { keyPath: 'id' });
         }
+        if (!d.objectStoreNames.contains(SETTINGS_STORE)) {
+          d.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
+        }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
+    });
+  }
+
+  // Lightweight key-value helpers on the settings store.
+  // IndexedDB survives service-worker cache clears (unlike localStorage).
+  function idbSetSetting(key, value) {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(SETTINGS_STORE, 'readwrite');
+        tx.objectStore(SETTINGS_STORE).put({ key, value });
+        tx.oncomplete = resolve;
+        tx.onerror = resolve; // non-fatal
+      } catch (_) { resolve(); }
+    });
+  }
+  function idbGetSetting(key) {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(SETTINGS_STORE, 'readonly');
+        const req = tx.objectStore(SETTINGS_STORE).get(key);
+        req.onsuccess = () => resolve(req.result?.value ?? null);
+        req.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
     });
   }
 
@@ -5076,15 +5103,19 @@
     doc.setFontSize(10);
     const reportGenY = titleY + 6;
     const reportGenDate = new Date().toLocaleString();
-    const reportGenLabel = 'Report Generated:';
+    const reportGenLabel = 'Report Generated:  ';
+    // Measure each part with its own font so widths are accurate.
+    doc.setFont('helvetica', 'bold');
+    const reportGenLabelW = doc.getTextWidth(reportGenLabel);
+    doc.setFont('helvetica', 'normal');
+    const reportGenValueW = doc.getTextWidth(reportGenDate);
+    const reportGenStartX = pageW - margin - reportGenLabelW - reportGenValueW;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...PDF_ACCENT);
-    const reportGenLabelW = doc.getTextWidth(reportGenLabel);
-    const reportGenValueW = doc.getTextWidth(' ' + reportGenDate);
-    doc.text(reportGenLabel, pageW - margin - reportGenValueW, reportGenY);
+    doc.text(reportGenLabel, reportGenStartX, reportGenY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 30, 30);
-    doc.text(' ' + reportGenDate, pageW - margin, reportGenY, { align: 'right' });
+    doc.text(reportGenDate, reportGenStartX + reportGenLabelW, reportGenY);
 
     // Company info (left) and customer info (right) both start at the same Y:
     // below the logo AND below "Report Generated", whichever is lower.
@@ -5126,15 +5157,20 @@
     // Customer info starts at the same Y as company info so both columns are level.
     let rightY = companyStartY;
     if (policyHolder) {
-      const prepLabel = 'Prepared For:';
-      const prepValue = ' ' + policyHolder;
       doc.setFontSize(10);
+      const prepLabel = 'Prepared For:  ';
+      // Measure each part with its own font so widths are accurate.
+      doc.setFont('helvetica', 'bold');
+      const prepLabelW = doc.getTextWidth(prepLabel);
+      doc.setFont('helvetica', 'normal');
+      const prepValueW = doc.getTextWidth(policyHolder);
+      const prepStartX = pageW - margin - prepLabelW - prepValueW;
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...PDF_ACCENT);
-      doc.text(prepLabel, pageW - margin - doc.getTextWidth(prepValue), rightY);
+      doc.text(prepLabel, prepStartX, rightY);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 30, 30);
-      doc.text(prepValue, pageW - margin, rightY, { align: 'right' });
+      doc.text(policyHolder, prepStartX + prepLabelW, rightY);
       rightY += 14;
     }
     if (propertyStreet) { doc.text(propertyStreet, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
@@ -7298,19 +7334,16 @@
     els.setupWizard.classList.add('hidden');
     if (currentFirebaseUser) {
       const uid = currentFirebaseUser.uid;
-      // Write setupComplete to the company profile subcollection (clearly client-writable).
-      if (typeof window.fbSetCompanyProfile === 'function') {
-        try {
-          await window.fbSetCompanyProfile(uid, { setupComplete: true });
-        } catch (e) { console.warn('[Setup] profile write failed:', e); }
-      }
-      // Also attempt the root user doc in case Firestore rules allow it — covers any
-      // existing accounts where this was the original write path.
-      if (typeof window.fbUpdateUserDoc === 'function') {
-        try { await window.fbUpdateUserDoc(uid, { setupComplete: true }); } catch (_) {}
-      }
-      // Local fast-path (survives sign-out, not cache clear).
+      // 1. IndexedDB — survives service-worker cache clears (most reliable on-device store).
+      await idbSetSetting('setupComplete_' + uid, true);
+      // 2. localStorage — fast-path for normal sessions.
       localStorage.setItem('pn_setupDone_' + uid, '1');
+      // 3. Firestore profile subcollection — cross-device / new-install fallback.
+      if (typeof window.fbSetCompanyProfile === 'function') {
+        window.fbSetCompanyProfile(uid, { setupComplete: true }).catch((e) => {
+          console.warn('[Setup] Firestore profile write failed:', e);
+        });
+      }
     }
   }
 
@@ -7443,23 +7476,20 @@
       els.authPassword.value = '';
       if (hasAccess(currentUserDoc)) {
         showAppScreen();
-        // Show setup wizard on first sign-in only.
-        // Check all four locations: root user doc, company profile flag, existing company
-        // data (covers users who set up before the flag existed), and localStorage fast-path.
-        const localDone  = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
-        const hasData    = !!(cloudProfile?.companyName || cloudProfile?.inspectorName);
-        const cloudDone  = currentUserDoc?.setupComplete === true   // root doc (old write path)
-                        || cloudProfile?.setupComplete  === true    // profile subcollection (new write path)
-                        || hasData;                                 // has existing profile data → already set up
-        if (!cloudDone && !localDone) {
+        // Show the setup wizard only for brand-new accounts (created in the last 30 minutes).
+        // This check is based on the Firebase Auth token — it survives every kind of cache
+        // clear because it's part of the authenticated session, not local storage.
+        // Existing users (account > 30 min old) never see it again regardless of cache state.
+        const accountAgeMs = Date.now() - new Date(user.metadata.creationTime).getTime();
+        const isNewAccount = accountAgeMs < 30 * 60 * 1000; // 30 minutes
+        const idbDone      = await idbGetSetting('setupComplete_' + user.uid) === true;
+        const localDone    = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
+        const hasData      = !!(cloudProfile?.companyName || cloudProfile?.inspectorName);
+        const cloudDone    = cloudProfile?.setupComplete === true
+                          || hasData
+                          || currentUserDoc?.setupComplete === true;
+        if (isNewAccount && !idbDone && !localDone && !cloudDone) {
           showSetupWizard();
-        } else {
-          // Repair localStorage for fast-path on next load.
-          if (!localDone) localStorage.setItem('pn_setupDone_' + user.uid, '1');
-          // Backfill the explicit flag so future cache-clears don't re-trigger the wizard.
-          if (!cloudProfile?.setupComplete && typeof window.fbSetCompanyProfile === 'function') {
-            window.fbSetCompanyProfile(user.uid, { setupComplete: true }).catch(() => {});
-          }
         }
       } else {
         showPaywallScreen();
