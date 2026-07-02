@@ -5073,11 +5073,18 @@
       titleY += 24;
     });
 
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor(110, 110, 110);
     const reportGenY = titleY + 6;
-    doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageW - margin, reportGenY, { align: 'right' });
+    const reportGenDate = new Date().toLocaleString();
+    const reportGenLabel = 'Report Generated:';
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...PDF_ACCENT);
+    const reportGenLabelW = doc.getTextWidth(reportGenLabel);
+    const reportGenValueW = doc.getTextWidth(' ' + reportGenDate);
+    doc.text(reportGenLabel, pageW - margin - reportGenValueW, reportGenY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 30, 30);
+    doc.text(' ' + reportGenDate, pageW - margin, reportGenY, { align: 'right' });
 
     // Company info (left) and customer info (right) both start at the same Y:
     // below the logo AND below "Report Generated", whichever is lower.
@@ -5118,7 +5125,18 @@
 
     // Customer info starts at the same Y as company info so both columns are level.
     let rightY = companyStartY;
-    if (policyHolder) { doc.text(`Prepared For: ${policyHolder}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
+    if (policyHolder) {
+      const prepLabel = 'Prepared For:';
+      const prepValue = ' ' + policyHolder;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...PDF_ACCENT);
+      doc.text(prepLabel, pageW - margin - doc.getTextWidth(prepValue), rightY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+      doc.text(prepValue, pageW - margin, rightY, { align: 'right' });
+      rightY += 14;
+    }
     if (propertyStreet) { doc.text(propertyStreet, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (propertyCSZ) { doc.text(propertyCSZ, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
