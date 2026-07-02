@@ -281,6 +281,10 @@
   #desktop-cam-icon { font-size:40px; opacity:.85; }
   #desktop-cam-text { font-size:15px; font-weight:700; color:#e8e8e8; }
   #desktop-cam-sub { font-size:13px; color:#97a1ab; max-width:320px; line-height:1.45; }
+  #dsk-pick-btn { background:#0a84ff; color:#fff; border:none; border-radius:12px;
+    padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer;
+    font-family:inherit; -webkit-appearance:none; appearance:none;
+    box-shadow:0 4px 16px rgba(10,132,255,.35); }
 
   /* Quick actions — desk users open the Camera tab almost entirely to import and
      organize, not to shoot a photo, so the actions they actually need are surfaced
@@ -1053,7 +1057,8 @@
       </div>
       <div id="dsk-dropzone">
         <div id="desktop-cam-icon">🖥️</div>
-        <div id="desktop-cam-text">Drag photos or PDFs here, or choose from your library</div>
+        <div id="desktop-cam-text">Drag photos or PDFs here</div>
+        <button id="dsk-pick-btn">🖼️ Choose Photos or PDFs from Desktop</button>
         <div id="desktop-cam-sub">Use "Watch Live" to view a remote inspection.</div>
       </div>
       <div id="dsk-quick-actions">
