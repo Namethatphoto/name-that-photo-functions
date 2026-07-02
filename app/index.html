@@ -613,7 +613,7 @@
   #naming-overlay { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; z-index:10; }
   #naming-overlay.hidden { display:none; }
   #naming-photo { flex:1; position:relative; overflow:hidden; }
-  #naming-photo img { width:100%; height:100%; object-fit:cover; }
+  #naming-photo img { width:100%; height:100%; object-fit:contain; background:#000; }
   #mic-indicator { position:absolute; top:env(safe-area-inset-top, 16px); left:0; right:0;
     display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:16px; }
   #mic-dot { width:14px; height:14px; border-radius:50%; background:#ff3b30; animation:pulse 1.2s infinite; }

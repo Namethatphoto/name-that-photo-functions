@@ -6399,16 +6399,25 @@
     }));
   }
 
+  const SAVE_PROFILE_URL = 'https://dapper-hummingbird-736d0d.netlify.app/.netlify/functions/save-profile';
+  const GET_PROFILE_URL  = 'https://dapper-hummingbird-736d0d.netlify.app/.netlify/functions/get-profile';
+
   async function saveCompanyProfileToFirestore(prefs) {
     if (!currentFirebaseUser) return;
     const uid = currentFirebaseUser.uid;
-    // 1. IndexedDB — survives cache clears, no Firestore rules needed.
+    // 1. IndexedDB — survives service-worker cache clears on this device.
     await idbSetSetting('pdfPrefs_' + uid, prefs);
-    // 2. Firestore — cross-device fallback (best-effort; errors are logged but not fatal).
-    if (typeof window.fbSetCompanyProfile === 'function') {
-      window.fbSetCompanyProfile(uid, prefs).catch((e) => {
-        console.warn('[Profile] Firestore write failed:', e);
+    // 2. Netlify function with admin credentials — bypasses Firestore security rules,
+    //    works cross-device, survives full cache clears (data lives server-side).
+    try {
+      const idToken = await currentFirebaseUser.getIdToken();
+      await fetch(SAVE_PROFILE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, profile: prefs }),
       });
+    } catch (e) {
+      console.warn('[Profile] Server save failed:', e);
     }
   }
 
@@ -7463,22 +7472,37 @@
         currentUserDoc = null; // Firestore read failed (e.g. rules not yet published) — don't block sign-in on it
       }
       // Restore company/inspector profile into localStorage so PDF fields populate
-      // correctly after a cache clear. Checked in order: Firestore (cross-device),
-      // then IndexedDB (on-device, survives cache clears, always written by Save to Profile).
+      // correctly after a cache clear.
+      // Layer 1: Netlify admin function — most reliable (server-side, bypasses rules).
+      // Layer 2: IndexedDB — on-device backup that survives service-worker cache clears.
+      // Layer 3: client Firestore SDK — kept as final fallback.
       let cloudProfile = null;
-      if (typeof window.fbGetCompanyProfile === 'function') {
-        try {
-          cloudProfile = await window.fbGetCompanyProfile(user.uid);
-          if (cloudProfile) savePdfPrefs(Object.assign(loadPdfPrefs(), cloudProfile));
-        } catch (e) { /* Firestore read failed — fall through to IndexedDB */ }
-      }
-      // IndexedDB fallback: if localStorage prefs are empty (cache cleared) and
-      // Firestore returned nothing, restore from the local IndexedDB copy.
-      const localPrefs = loadPdfPrefs();
-      const hasLocalPrefs = !!(localPrefs.companyName || localPrefs.inspectorName);
-      if (!hasLocalPrefs) {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch(GET_PROFILE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          cloudProfile = data.profile || null;
+        }
+      } catch (e) { /* network unavailable — fall through */ }
+
+      if (cloudProfile) {
+        savePdfPrefs(Object.assign(loadPdfPrefs(), cloudProfile));
+      } else {
+        // IndexedDB fallback (works offline / when network fails)
         const idbPrefs = await idbGetSetting('pdfPrefs_' + user.uid);
         if (idbPrefs) savePdfPrefs(Object.assign(loadPdfPrefs(), idbPrefs));
+        // Last resort: client-side Firestore SDK
+        if (!idbPrefs && typeof window.fbGetCompanyProfile === 'function') {
+          try {
+            const sdkProfile = await window.fbGetCompanyProfile(user.uid);
+            if (sdkProfile) savePdfPrefs(Object.assign(loadPdfPrefs(), sdkProfile));
+          } catch (e) { /* ignore */ }
+        }
       }
       els.authEmail.value = '';
       els.authPassword.value = '';
