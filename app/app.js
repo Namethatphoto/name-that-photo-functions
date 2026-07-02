@@ -3067,7 +3067,7 @@
   // manager is faster than clicking through a file picker. Reuses the exact same
   // importQueue/processNextImport pipeline as "Choose from Library" so naming,
   // normalization, and folder-scoping all behave identically either way.
-  els.dskDropzone.addEventListener('click', () => els.pickPhoto.click());
+  els.dskDropzone.addEventListener('click', () => { els.photoPicker.value = ''; els.photoPicker.click(); });
   els.dskDropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
     els.dskDropzone.classList.add('drag-over');
