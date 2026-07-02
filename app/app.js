@@ -7278,14 +7278,22 @@
   async function completeSetup() {
     if (!els.setupWizard) return;
     els.setupWizard.classList.add('hidden');
-    // Mark setup complete in the company profile subcollection (writable by the client).
-    // The root users/{uid} doc is written only by the Stripe webhook and may be read-only
-    // under Firestore rules, so we store this flag where we know writes succeed.
-    if (currentFirebaseUser && typeof window.fbSetCompanyProfile === 'function') {
-      try { await window.fbSetCompanyProfile(currentFirebaseUser.uid, { setupComplete: true }); } catch (e) {}
+    if (currentFirebaseUser) {
+      const uid = currentFirebaseUser.uid;
+      // Write setupComplete to the company profile subcollection (clearly client-writable).
+      if (typeof window.fbSetCompanyProfile === 'function') {
+        try {
+          await window.fbSetCompanyProfile(uid, { setupComplete: true });
+        } catch (e) { console.warn('[Setup] profile write failed:', e); }
+      }
+      // Also attempt the root user doc in case Firestore rules allow it — covers any
+      // existing accounts where this was the original write path.
+      if (typeof window.fbUpdateUserDoc === 'function') {
+        try { await window.fbUpdateUserDoc(uid, { setupComplete: true }); } catch (_) {}
+      }
+      // Local fast-path (survives sign-out, not cache clear).
+      localStorage.setItem('pn_setupDone_' + uid, '1');
     }
-    // Also persist locally so it's instant on next load
-    if (currentFirebaseUser) localStorage.setItem('pn_setupDone_' + currentFirebaseUser.uid, '1');
   }
 
   if (els.setupNextBtn) {
@@ -7417,13 +7425,17 @@
       els.authPassword.value = '';
       if (hasAccess(currentUserDoc)) {
         showAppScreen();
-        // Show setup wizard on first sign-in.
-        // setupComplete is stored in the company profile subcollection (client-writable).
-        // localDone is a same-device fast-path that survives sign-out but not cache clears.
-        const localDone = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
-        const cloudDone = cloudProfile?.setupComplete === true;
+        // Show setup wizard on first sign-in only.
+        // Check all three locations: root user doc (old path), company profile (new path),
+        // and local storage (fast-path, lost on cache clear).
+        const localDone  = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
+        const cloudDone  = currentUserDoc?.setupComplete === true   // root doc (old write path)
+                        || cloudProfile?.setupComplete  === true;   // profile subcollection (new write path)
         if (!cloudDone && !localDone) {
           showSetupWizard();
+        } else if (!localDone) {
+          // Repair local flag so future loads are instant without a Firestore round-trip.
+          localStorage.setItem('pn_setupDone_' + user.uid, '1');
         }
       } else {
         showPaywallScreen();
