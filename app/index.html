@@ -917,6 +917,15 @@
   #pdf-logo-pick, #pdf-logo-clear { background:#2c2c2e; color:#fff; border:1px solid #3a3a3c; border-radius:8px;
     padding:9px 12px; font-size:13px; font-weight:600; }
   #pdf-logo-clear { color:#ff453a; }
+  #pdf-logo-controls { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+  #pdf-logo-controls.hidden { display:none; }
+  .pdf-logo-ctrl-label { font-size:11px; color:#777; text-transform:uppercase; letter-spacing:.04em; }
+  #pdf-logo-pos-row { display:flex; gap:6px; }
+  .logo-pos-btn { flex:1; padding:9px 0; font-size:13px; font-weight:600; border-radius:9px;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:#ccc;
+    font-family:inherit; cursor:pointer; }
+  .logo-pos-btn.selected { background:#0a84ff; border-color:#0a84ff; color:#fff; }
+  #pdf-logo-size-slider { width:100%; accent-color:#0a84ff; height:6px; cursor:pointer; }
   #pdf-save-profile-row { margin:14px 0 2px; display:flex; justify-content:flex-end; }
   #pdf-save-profile-btn { background:#0a84ff; color:#fff; border:none; border-radius:10px;
     padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
@@ -1754,6 +1763,16 @@
     </div>
     <input id="pdf-logo-file" type="file" accept="image/*,.jpg,.jpeg,.png,.bmp,.gif,.webp" class="hidden">
     <div id="pdf-logo-preview" class="hidden"><img id="pdf-logo-preview-img" alt="logo"></div>
+    <div id="pdf-logo-controls" class="hidden">
+      <div class="pdf-logo-ctrl-label">Position</div>
+      <div id="pdf-logo-pos-row">
+        <button class="logo-pos-btn selected" data-pos="left">◀ Left</button>
+        <button class="logo-pos-btn" data-pos="center">Center</button>
+        <button class="logo-pos-btn" data-pos="right">Right ▶</button>
+      </div>
+      <div class="pdf-logo-ctrl-label">Size — <span id="pdf-logo-size-val">100</span>%</div>
+      <input id="pdf-logo-size-slider" type="range" min="40" max="160" value="100" step="5">
+    </div>
 
     <div class="pdf-label">Inspector name</div>
     <div class="pdf-field-row">

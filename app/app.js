@@ -5026,22 +5026,33 @@
     const { title, policyHolder, claimNumber, policyNumber, inspectorName, licenseNumber,
       inspectorPhone, inspectorEmail,
       companyName, companyAddress, companyCity, companyState, companyZip,
-      companyContact, logoDataUrl, ownerPhone,
+      companyContact, logoDataUrl, logoPosition = 'left', logoSizePct = 100, ownerPhone,
       propertyAddress: propertyStreet, propertyCity, propertyState, propertyZip } = opts;
     const propertyCSZ = formatCityStateZip(propertyCity, propertyState, propertyZip);
     const companyCSZ = formatCityStateZip(companyCity, companyState, companyZip);
     drawAccentBar(doc, pageW);
     let y = margin;
 
+    let logoRenderH = 0; // tracks logo height when placed right (to push title down)
     if (logoDataUrl) {
       try {
         const { img, width, height } = await loadImageFromDataUrl(logoDataUrl);
-        const maxW = 220, maxH = 88;
+        const sizeFactor = Math.max(0.4, Math.min(1.6, (logoSizePct || 100) / 100));
+        const maxW = Math.round(220 * sizeFactor);
+        const maxH = Math.round(88  * sizeFactor);
         const scale = Math.min(maxW / width, maxH / height, 1);
         const w = width * scale, h = height * scale;
         const pngDataUrl = toPngDataUrl(img, width, height);
-        doc.addImage(pngDataUrl, 'PNG', margin, y, w, h);
-        y += h + 16;
+        const pos = logoPosition || 'left';
+        const logoX = pos === 'center' ? (pageW - w) / 2
+                    : pos === 'right'  ? pageW - margin - w
+                    : margin;
+        doc.addImage(pngDataUrl, 'PNG', logoX, margin, w, h);
+        if (pos === 'right') {
+          logoRenderH = h; // title will start below the right-placed logo
+        } else {
+          y += h + 16;    // left/center: advance both columns below the logo
+        }
       } catch (err) { console.error(err); }
     }
 
@@ -5087,7 +5098,8 @@
     doc.setTextColor(...PDF_ACCENT);
     const titleMaxW = Math.max(pageW - margin * 2 - 220, 140);
     const titleLines = doc.splitTextToSize(title || 'Photo Report', titleMaxW);
-    let titleY = margin + 16;
+    // If logo is right-positioned, push title below the logo height so they don't overlap
+    let titleY = (logoRenderH > 0) ? margin + logoRenderH + 8 : margin + 16;
     titleLines.forEach((line) => {
       doc.text(line, pageW - margin, titleY, { align: 'right' });
       titleY += 24;
@@ -5699,6 +5711,10 @@
     logoFile: document.getElementById('pdf-logo-file'),
     logoPreview: document.getElementById('pdf-logo-preview'),
     logoPreviewImg: document.getElementById('pdf-logo-preview-img'),
+    logoControls: document.getElementById('pdf-logo-controls'),
+    logoPosRow: document.getElementById('pdf-logo-pos-row'),
+    logoSizeSlider: document.getElementById('pdf-logo-size-slider'),
+    logoSizeVal: document.getElementById('pdf-logo-size-val'),
     coverPhotoStrip: document.getElementById('pdf-coverphoto-strip'),
     cancel: document.getElementById('pdf-cancel'),
     saveCamera: document.getElementById('pdf-save-camera'),
@@ -5730,15 +5746,26 @@
     try { localStorage.setItem(PDF_PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
   }
   let pdfLogoDataUrl = null;
+  let pdfLogoPosition = 'left';   // 'left' | 'center' | 'right'
+  let pdfLogoSizePct  = 100;      // 40–160, maps to a scale factor
 
   function applyLogoPreview() {
     if (pdfLogoDataUrl) {
       pdfEls.logoPreviewImg.src = pdfLogoDataUrl;
       pdfEls.logoPreview.classList.remove('hidden');
+      if (pdfEls.logoControls) pdfEls.logoControls.classList.remove('hidden');
     } else {
       pdfEls.logoPreviewImg.src = '';
       pdfEls.logoPreview.classList.add('hidden');
+      if (pdfEls.logoControls) pdfEls.logoControls.classList.add('hidden');
     }
+  }
+
+  function applyLogoPosUI(pos) {
+    if (!pdfEls.logoPosRow) return;
+    pdfEls.logoPosRow.querySelectorAll('.logo-pos-btn').forEach((btn) => {
+      btn.classList.toggle('selected', btn.dataset.pos === pos);
+    });
   }
 
   pdfEls.logoPick.addEventListener('click', () => pdfEls.logoFile.click());
@@ -5763,6 +5790,24 @@
     delete prefs.logoDataUrl;
     savePdfPrefs(prefs);
   });
+
+  // Position buttons
+  if (pdfEls.logoPosRow) {
+    pdfEls.logoPosRow.addEventListener('click', (e) => {
+      const btn = e.target.closest('.logo-pos-btn');
+      if (!btn) return;
+      pdfLogoPosition = btn.dataset.pos;
+      applyLogoPosUI(pdfLogoPosition);
+    });
+  }
+
+  // Size slider
+  if (pdfEls.logoSizeSlider) {
+    pdfEls.logoSizeSlider.addEventListener('input', () => {
+      pdfLogoSizePct = Number(pdfEls.logoSizeSlider.value);
+      if (pdfEls.logoSizeVal) pdfEls.logoSizeVal.textContent = pdfLogoSizePct;
+    });
+  }
 
   // Lets the user pick one of the photos already in this report as a hero image on the
   // cover sheet (e.g. a front-of-property shot) — built from pdfPendingRecords rather than
@@ -6301,6 +6346,8 @@
       companyState: pdfEls.companyStateInput.value.trim(),
       companyZip: pdfEls.companyZipInput.value.trim(),
       companyContact: pdfEls.contactInput.value.trim(),
+      logoPosition: pdfLogoPosition,
+      logoSizePct:  pdfLogoSizePct,
     }));
   }
 
@@ -6332,6 +6379,11 @@
     pdfEls.companyZipInput.value = prefs.companyZip || '';
     pdfEls.contactInput.value = prefs.companyContact || '';
     pdfLogoDataUrl = prefs.logoDataUrl || null;
+    pdfLogoPosition = prefs.logoPosition || 'left';
+    pdfLogoSizePct  = Number(prefs.logoSizePct) || 100;
+    applyLogoPosUI(pdfLogoPosition);
+    if (pdfEls.logoSizeSlider) pdfEls.logoSizeSlider.value = pdfLogoSizePct;
+    if (pdfEls.logoSizeVal) pdfEls.logoSizeVal.textContent = pdfLogoSizePct;
 
     // Recall this project's own claim info (if any was entered earlier — e.g. via
     // "Add PDF Report Info" at project creation, before photos existed).
@@ -6546,6 +6598,8 @@
       inspectorName, licenseNumber, inspectorPhone, inspectorEmail,
       companyName, companyAddress, companyCity, companyState, companyZip, companyContact,
       logoDataUrl: pdfLogoDataUrl,
+      logoPosition: pdfLogoPosition,
+      logoSizePct:  pdfLogoSizePct,
       coverPhotoId: pdfCoverPhotoId,
       attachments: pdfPendingAttachments || [],
     };
