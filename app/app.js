@@ -5103,19 +5103,19 @@
     doc.setFontSize(10);
     const reportGenY = titleY + 6;
     const reportGenDate = new Date().toLocaleString();
-    const reportGenLabel = 'Report Generated:  ';
-    // Measure each part with its own font so widths are accurate.
-    doc.setFont('helvetica', 'bold');
-    const reportGenLabelW = doc.getTextWidth(reportGenLabel);
+    // colonX: shared alignment point used by both "Report Generated:" and "Prepared For:".
+    // Labels are right-aligned here; values left-align from colonX + colonGap.
+    // Anchored so the date value (the widest expected value) ends exactly at the right margin.
+    const colonGap = 4;
     doc.setFont('helvetica', 'normal');
-    const reportGenValueW = doc.getTextWidth(reportGenDate);
-    const reportGenStartX = pageW - margin - reportGenLabelW - reportGenValueW;
+    const reportGenDateW = doc.getTextWidth(reportGenDate);
+    const colonX = pageW - margin - reportGenDateW - colonGap;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...PDF_ACCENT);
-    doc.text(reportGenLabel, reportGenStartX, reportGenY);
+    doc.text('Report Generated:', colonX, reportGenY, { align: 'right' });
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 30, 30);
-    doc.text(reportGenDate, reportGenStartX + reportGenLabelW, reportGenY);
+    doc.text(reportGenDate, colonX + colonGap, reportGenY);
 
     // Company info (left) and customer info (right) both start at the same Y:
     // below the logo AND below "Report Generated", whichever is lower.
@@ -5155,27 +5155,21 @@
     const leftBottom = y;
 
     // Customer info starts at the same Y as company info so both columns are level.
+    // Uses colonX so "Prepared For:" aligns with "Report Generated:" above it.
     let rightY = companyStartY;
+    doc.setFontSize(10);
     if (policyHolder) {
-      doc.setFontSize(10);
-      const prepLabel = 'Prepared For:  ';
-      // Measure each part with its own font so widths are accurate.
-      doc.setFont('helvetica', 'bold');
-      const prepLabelW = doc.getTextWidth(prepLabel);
-      doc.setFont('helvetica', 'normal');
-      const prepValueW = doc.getTextWidth(policyHolder);
-      const prepStartX = pageW - margin - prepLabelW - prepValueW;
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...PDF_ACCENT);
-      doc.text(prepLabel, prepStartX, rightY);
+      doc.text('Prepared For:', colonX, rightY, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 30, 30);
-      doc.text(policyHolder, prepStartX + prepLabelW, rightY);
+      doc.text(policyHolder, colonX + colonGap, rightY);
       rightY += 14;
     }
-    if (propertyStreet) { doc.text(propertyStreet, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
-    if (propertyCSZ) { doc.text(propertyCSZ, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
-    if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
+    if (propertyStreet) { doc.setFont('helvetica', 'normal'); doc.setTextColor(110, 110, 110); doc.text(propertyStreet, colonX + colonGap, rightY); rightY += 14; }
+    if (propertyCSZ) { doc.text(propertyCSZ, colonX + colonGap, rightY); rightY += 14; }
+    if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, colonX + colonGap, rightY); rightY += 14; }
     const rightBottom = rightY;
 
     y = Math.max(leftBottom, titleY, rightBottom) + 14;
@@ -6406,10 +6400,16 @@
   }
 
   async function saveCompanyProfileToFirestore(prefs) {
-    if (!currentFirebaseUser || typeof window.fbSetCompanyProfile !== 'function') return;
-    try {
-      await window.fbSetCompanyProfile(currentFirebaseUser.uid, prefs);
-    } catch (e) { /* Firestore write failed — localStorage copy already saved */ }
+    if (!currentFirebaseUser) return;
+    const uid = currentFirebaseUser.uid;
+    // 1. IndexedDB — survives cache clears, no Firestore rules needed.
+    await idbSetSetting('pdfPrefs_' + uid, prefs);
+    // 2. Firestore — cross-device fallback (best-effort; errors are logged but not fatal).
+    if (typeof window.fbSetCompanyProfile === 'function') {
+      window.fbSetCompanyProfile(uid, prefs).catch((e) => {
+        console.warn('[Profile] Firestore write failed:', e);
+      });
+    }
   }
 
   function openPdfModalCore(photoRecords, attachmentRecords) {
@@ -7462,15 +7462,23 @@
       } catch (err) {
         currentUserDoc = null; // Firestore read failed (e.g. rules not yet published) — don't block sign-in on it
       }
-      // Load cloud-saved company/inspector profile and merge into localStorage so PDF
-      // fields populate correctly even after the browser cache has been cleared.
-      // Also used below to check setupComplete (stored in the profile subcollection).
+      // Restore company/inspector profile into localStorage so PDF fields populate
+      // correctly after a cache clear. Checked in order: Firestore (cross-device),
+      // then IndexedDB (on-device, survives cache clears, always written by Save to Profile).
       let cloudProfile = null;
       if (typeof window.fbGetCompanyProfile === 'function') {
         try {
           cloudProfile = await window.fbGetCompanyProfile(user.uid);
           if (cloudProfile) savePdfPrefs(Object.assign(loadPdfPrefs(), cloudProfile));
-        } catch (e) { /* ignore — localStorage values serve as fallback */ }
+        } catch (e) { /* Firestore read failed — fall through to IndexedDB */ }
+      }
+      // IndexedDB fallback: if localStorage prefs are empty (cache cleared) and
+      // Firestore returned nothing, restore from the local IndexedDB copy.
+      const localPrefs = loadPdfPrefs();
+      const hasLocalPrefs = !!(localPrefs.companyName || localPrefs.inspectorName);
+      if (!hasLocalPrefs) {
+        const idbPrefs = await idbGetSetting('pdfPrefs_' + user.uid);
+        if (idbPrefs) savePdfPrefs(Object.assign(loadPdfPrefs(), idbPrefs));
       }
       els.authEmail.value = '';
       els.authPassword.value = '';
