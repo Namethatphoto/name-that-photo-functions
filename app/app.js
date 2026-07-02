@@ -321,6 +321,50 @@
     paywallStart: document.getElementById('paywall-start'),
     paywallRefresh: document.getElementById('paywall-refresh'),
     paywallSignout: document.getElementById('paywall-signout'),
+    settingsBtn: document.getElementById('settings-btn'),
+    settingsModal: document.getElementById('settings-modal'),
+    settingsClose: document.getElementById('settings-close'),
+    stgCompanyInput: document.getElementById('stg-company-input'),
+    stgCompanyAddressInput: document.getElementById('stg-company-address-input'),
+    stgCompanyCityInput: document.getElementById('stg-company-city-input'),
+    stgCompanyStateInput: document.getElementById('stg-company-state-input'),
+    stgCompanyZipInput: document.getElementById('stg-company-zip-input'),
+    stgContactInput: document.getElementById('stg-contact-input'),
+    stgInspectorInput: document.getElementById('stg-inspector-input'),
+    stgLicenseInput: document.getElementById('stg-license-input'),
+    stgInspectorPhoneInput: document.getElementById('stg-inspector-phone-input'),
+    stgInspectorEmailInput: document.getElementById('stg-inspector-email-input'),
+    stgLogoPick: document.getElementById('stg-logo-pick'),
+    stgLogoClear: document.getElementById('stg-logo-clear'),
+    stgLogoFile: document.getElementById('stg-logo-file'),
+    stgLogoPreview: document.getElementById('stg-logo-preview'),
+    stgLogoPreviewImg: document.getElementById('stg-logo-preview-img'),
+    stgSaveProfileBtn: document.getElementById('stg-save-profile-btn'),
+    stgDriveStatusRow: document.getElementById('stg-drive-status-row'),
+    stgDriveStatusText: document.getElementById('stg-drive-status-text'),
+    stgDriveConnectBtn: document.getElementById('stg-drive-connect-btn'),
+    stgDriveDisconnectBtn: document.getElementById('stg-drive-disconnect-btn'),
+    setupWizard: document.getElementById('setup-wizard'),
+    setupStepNum: document.getElementById('setup-step-num'),
+    setupStep1: document.getElementById('setup-step-1'),
+    setupStep2: document.getElementById('setup-step-2'),
+    setupCompanyInput: document.getElementById('setup-company-input'),
+    setupCompanyAddressInput: document.getElementById('setup-company-address-input'),
+    setupCompanyCityInput: document.getElementById('setup-company-city-input'),
+    setupCompanyStateInput: document.getElementById('setup-company-state-input'),
+    setupCompanyZipInput: document.getElementById('setup-company-zip-input'),
+    setupContactInput: document.getElementById('setup-contact-input'),
+    setupInspectorInput: document.getElementById('setup-inspector-input'),
+    setupLicenseInput: document.getElementById('setup-license-input'),
+    setupInspectorPhoneInput: document.getElementById('setup-inspector-phone-input'),
+    setupInspectorEmailInput: document.getElementById('setup-inspector-email-input'),
+    setupNextBtn: document.getElementById('setup-next-btn'),
+    setupDriveStatusRow: document.getElementById('setup-drive-status-row'),
+    setupDriveStatusText: document.getElementById('setup-drive-status-text'),
+    setupDriveConnectBtn: document.getElementById('setup-drive-connect-btn'),
+    setupDriveDisconnectBtn: document.getElementById('setup-drive-disconnect-btn'),
+    setupFinishBtn: document.getElementById('setup-finish-btn'),
+    setupSkipDrive: document.getElementById('setup-skip-drive'),
     accountBtn: document.getElementById('account-btn'),
     accountView: document.getElementById('account-view'),
     accountStatusText: document.getElementById('account-status-text'),
@@ -4987,7 +5031,7 @@
     if (logoDataUrl) {
       try {
         const { img, width, height } = await loadImageFromDataUrl(logoDataUrl);
-        const maxW = 170, maxH = 64;
+        const maxW = 220, maxH = 88;
         const scale = Math.min(maxW / width, maxH / height, 1);
         const w = width * scale, h = height * scale;
         const pngDataUrl = toPngDataUrl(img, width, height);
@@ -5102,7 +5146,7 @@
       const colGap = 24;
       const colW = (pageW - margin * 2 - colGap) / 2;
       const leftX = margin + 14;
-      const rightX = margin + colW + colGap;
+      const rightX = margin + colW + colGap - 15;
       const labelW = 110;
       doc.setFontSize(11);
       y += panelPadY;
@@ -5123,7 +5167,7 @@
           doc.text(label, rightX, y);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(30, 30, 30);
-          doc.text(String(value), rightX + labelW, y, { maxWidth: colW - labelW - 14 });
+          doc.text(String(value), rightX + labelW, y, { maxWidth: colW - labelW + 1 });
         }
         y += rowH;
       }
@@ -7009,6 +7053,193 @@
       els.accountManage.classList.remove('hidden');
     }
   }
+  /* ================================================================
+     SETTINGS MODAL
+     ================================================================ */
+  let stgLogoDataUrl = null;
+
+  function updateStgDriveStatusUI() {
+    if (!els.stgDriveStatusText) return;
+    const connected = !!driveAccessToken || localStorage.getItem(DRIVE_CONNECTED_KEY) === '1';
+    els.stgDriveStatusText.textContent = connected ? 'Google Drive: Connected ✓' : 'Google Drive: Not connected';
+    if (els.stgDriveConnectBtn) els.stgDriveConnectBtn.classList.toggle('hidden', connected);
+    if (els.stgDriveDisconnectBtn) els.stgDriveDisconnectBtn.classList.toggle('hidden', !connected);
+  }
+
+  function applyStgLogoPreview() {
+    if (!els.stgLogoPreview || !els.stgLogoPreviewImg) return;
+    if (stgLogoDataUrl) {
+      els.stgLogoPreviewImg.src = stgLogoDataUrl;
+      els.stgLogoPreview.classList.remove('hidden');
+    } else {
+      els.stgLogoPreview.classList.add('hidden');
+      els.stgLogoPreviewImg.src = '';
+    }
+  }
+
+  function openSettingsModal() {
+    const prefs = loadPdfPrefs();
+    if (els.stgCompanyInput) els.stgCompanyInput.value = prefs.companyName || '';
+    if (els.stgCompanyAddressInput) els.stgCompanyAddressInput.value = prefs.companyAddress || '';
+    if (els.stgCompanyCityInput) els.stgCompanyCityInput.value = prefs.companyCity || '';
+    if (els.stgCompanyStateInput) els.stgCompanyStateInput.value = prefs.companyState || '';
+    if (els.stgCompanyZipInput) els.stgCompanyZipInput.value = prefs.companyZip || '';
+    if (els.stgContactInput) els.stgContactInput.value = prefs.companyContact || '';
+    if (els.stgInspectorInput) els.stgInspectorInput.value = prefs.inspectorName || '';
+    if (els.stgLicenseInput) els.stgLicenseInput.value = prefs.licenseNumber || '';
+    if (els.stgInspectorPhoneInput) els.stgInspectorPhoneInput.value = prefs.inspectorPhone || '';
+    if (els.stgInspectorEmailInput) els.stgInspectorEmailInput.value = prefs.inspectorEmail || '';
+    stgLogoDataUrl = prefs.logoDataUrl || null;
+    applyStgLogoPreview();
+    updateStgDriveStatusUI();
+    els.settingsModal.classList.remove('hidden');
+  }
+
+  function closeSettingsModal() {
+    if (els.settingsModal) els.settingsModal.classList.add('hidden');
+  }
+
+  if (els.settingsBtn) els.settingsBtn.addEventListener('click', () => openSettingsModal());
+  if (els.settingsClose) els.settingsClose.addEventListener('click', closeSettingsModal);
+
+  if (els.stgLogoPick) {
+    els.stgLogoPick.addEventListener('click', () => { if (els.stgLogoFile) els.stgLogoFile.click(); });
+  }
+  if (els.stgLogoFile) {
+    els.stgLogoFile.addEventListener('change', () => {
+      const f = els.stgLogoFile.files[0]; if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => { stgLogoDataUrl = ev.target.result; applyStgLogoPreview(); };
+      reader.readAsDataURL(f);
+    });
+  }
+  if (els.stgLogoClear) {
+    els.stgLogoClear.addEventListener('click', () => { stgLogoDataUrl = null; applyStgLogoPreview(); });
+  }
+
+  if (els.stgSaveProfileBtn) {
+    els.stgSaveProfileBtn.addEventListener('click', async () => {
+      const prefs = {
+        companyName: els.stgCompanyInput.value.trim(),
+        companyAddress: els.stgCompanyAddressInput.value.trim(),
+        companyCity: els.stgCompanyCityInput.value.trim(),
+        companyState: els.stgCompanyStateInput.value.trim(),
+        companyZip: els.stgCompanyZipInput.value.trim(),
+        companyContact: els.stgContactInput.value.trim(),
+        inspectorName: els.stgInspectorInput.value.trim(),
+        licenseNumber: els.stgLicenseInput.value.trim(),
+        inspectorPhone: els.stgInspectorPhoneInput.value.trim(),
+        inspectorEmail: els.stgInspectorEmailInput.value.trim(),
+        logoDataUrl: stgLogoDataUrl || null,
+      };
+      savePdfPrefs(Object.assign(loadPdfPrefs(), prefs));
+      await saveCompanyProfileToFirestore(prefs);
+      const btn = els.stgSaveProfileBtn;
+      const orig = btn.textContent;
+      btn.textContent = '✅ Saved';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+    });
+  }
+
+  if (els.stgDriveConnectBtn) {
+    els.stgDriveConnectBtn.addEventListener('click', async () => {
+      const token = await getDriveAccessToken({ interactive: true });
+      updateDriveStatusUI();
+      updateStgDriveStatusUI();
+      if (!token) toast('Google Drive sign-in was cancelled or failed');
+    });
+  }
+  if (els.stgDriveDisconnectBtn) {
+    els.stgDriveDisconnectBtn.addEventListener('click', () => { disconnectDrive(); updateStgDriveStatusUI(); });
+  }
+
+  /* ================================================================
+     SETUP WIZARD (first-run onboarding)
+     ================================================================ */
+  function updateSetupDriveStatusUI() {
+    if (!els.setupDriveStatusText) return;
+    const connected = !!driveAccessToken || localStorage.getItem(DRIVE_CONNECTED_KEY) === '1';
+    els.setupDriveStatusText.textContent = connected ? 'Google Drive: Connected ✓' : 'Google Drive: Not connected';
+    if (els.setupDriveConnectBtn) els.setupDriveConnectBtn.classList.toggle('hidden', connected);
+    if (els.setupDriveDisconnectBtn) els.setupDriveDisconnectBtn.classList.toggle('hidden', !connected);
+  }
+
+  function showSetupWizard() {
+    if (!els.setupWizard) return;
+    // Step 1: pre-fill any existing prefs (e.g. returning user who cleared cache)
+    const prefs = loadPdfPrefs();
+    if (els.setupCompanyInput) els.setupCompanyInput.value = prefs.companyName || '';
+    if (els.setupCompanyAddressInput) els.setupCompanyAddressInput.value = prefs.companyAddress || '';
+    if (els.setupCompanyCityInput) els.setupCompanyCityInput.value = prefs.companyCity || '';
+    if (els.setupCompanyStateInput) els.setupCompanyStateInput.value = prefs.companyState || '';
+    if (els.setupCompanyZipInput) els.setupCompanyZipInput.value = prefs.companyZip || '';
+    if (els.setupContactInput) els.setupContactInput.value = prefs.companyContact || '';
+    if (els.setupInspectorInput) els.setupInspectorInput.value = prefs.inspectorName || '';
+    if (els.setupLicenseInput) els.setupLicenseInput.value = prefs.licenseNumber || '';
+    if (els.setupInspectorPhoneInput) els.setupInspectorPhoneInput.value = prefs.inspectorPhone || '';
+    if (els.setupInspectorEmailInput) els.setupInspectorEmailInput.value = prefs.inspectorEmail || '';
+    // Show step 1
+    if (els.setupStep1) els.setupStep1.classList.remove('hidden');
+    if (els.setupStep2) els.setupStep2.classList.add('hidden');
+    if (els.setupStepNum) els.setupStepNum.textContent = '1';
+    els.setupWizard.classList.remove('hidden');
+  }
+
+  async function completeSetup() {
+    if (!els.setupWizard) return;
+    els.setupWizard.classList.add('hidden');
+    // Mark setup complete in Firestore so the wizard never shows again
+    if (currentFirebaseUser && typeof window.fbUpdateUserDoc === 'function') {
+      try { await window.fbUpdateUserDoc(currentFirebaseUser.uid, { setupComplete: true }); } catch (e) {}
+    }
+    // Also persist locally so it's instant on next load
+    if (currentFirebaseUser) localStorage.setItem('pn_setupDone_' + currentFirebaseUser.uid, '1');
+  }
+
+  if (els.setupNextBtn) {
+    els.setupNextBtn.addEventListener('click', async () => {
+      // Save Step 1 company/inspector prefs
+      const prefs = {
+        companyName: (els.setupCompanyInput?.value || '').trim(),
+        companyAddress: (els.setupCompanyAddressInput?.value || '').trim(),
+        companyCity: (els.setupCompanyCityInput?.value || '').trim(),
+        companyState: (els.setupCompanyStateInput?.value || '').trim(),
+        companyZip: (els.setupCompanyZipInput?.value || '').trim(),
+        companyContact: (els.setupContactInput?.value || '').trim(),
+        inspectorName: (els.setupInspectorInput?.value || '').trim(),
+        licenseNumber: (els.setupLicenseInput?.value || '').trim(),
+        inspectorPhone: (els.setupInspectorPhoneInput?.value || '').trim(),
+        inspectorEmail: (els.setupInspectorEmailInput?.value || '').trim(),
+      };
+      savePdfPrefs(Object.assign(loadPdfPrefs(), prefs));
+      saveCompanyProfileToFirestore(prefs); // async, no need to await
+      // Advance to step 2
+      if (els.setupStep1) els.setupStep1.classList.add('hidden');
+      if (els.setupStep2) els.setupStep2.classList.remove('hidden');
+      if (els.setupStepNum) els.setupStepNum.textContent = '2';
+      updateSetupDriveStatusUI();
+    });
+  }
+
+  if (els.setupDriveConnectBtn) {
+    els.setupDriveConnectBtn.addEventListener('click', async () => {
+      const token = await getDriveAccessToken({ interactive: true });
+      updateDriveStatusUI();
+      updateSetupDriveStatusUI();
+      if (!token) toast('Google Drive sign-in was cancelled or failed');
+    });
+  }
+  if (els.setupDriveDisconnectBtn) {
+    els.setupDriveDisconnectBtn.addEventListener('click', () => {
+      disconnectDrive();
+      updateSetupDriveStatusUI();
+    });
+  }
+
+  if (els.setupFinishBtn) els.setupFinishBtn.addEventListener('click', completeSetup);
+  if (els.setupSkipDrive) els.setupSkipDrive.addEventListener('click', completeSetup);
+
   function showAccountScreen() {
     clearAccountError();
     renderAccountStatus();
@@ -7092,6 +7323,11 @@
       els.authPassword.value = '';
       if (hasAccess(currentUserDoc)) {
         showAppScreen();
+        // Show setup wizard on first sign-in (no setupComplete flag AND no local override)
+        const localDone = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
+        if (!currentUserDoc?.setupComplete && !localDone) {
+          showSetupWizard();
+        }
       } else {
         showPaywallScreen();
       }

@@ -78,6 +78,80 @@
   #drive-disconnect-btn { background:#333; }
   #drive-disconnect-btn.hidden, #drive-connect-btn.hidden { display:none; }
 
+  /* ---------- Setup Wizard ---------- */
+  #setup-wizard { position:fixed; inset:0; z-index:700; background:#000;
+    display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  #setup-wizard.hidden { display:none; }
+  #setup-card { width:100%; max-width:380px; display:flex; flex-direction:column; gap:12px; }
+  #setup-progress { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:#0a84ff; text-align:center; }
+  .setup-step { display:flex; flex-direction:column; gap:10px; }
+  .setup-step.hidden { display:none; }
+  .setup-step-icon { font-size:38px; text-align:center; }
+  .setup-h2 { margin:0; font-size:22px; font-weight:800; text-align:center; }
+  .setup-sub { margin:0 0 6px; font-size:13px; color:#999; text-align:center; line-height:1.4; }
+  .setup-field-label { font-size:12px; color:#777; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
+  .setup-input { width:100%; background:#1c1c1e; border:1px solid #333; border-radius:10px;
+    color:#fff; padding:12px 14px; font-size:15px; font-family:inherit; }
+  .setup-input::placeholder { color:#555; }
+  .setup-csz { display:flex; gap:6px; }
+  .setup-csz .setup-input.city { flex:3; }
+  .setup-csz .setup-input.state { flex:1; text-transform:uppercase; }
+  .setup-csz .setup-input.zip { flex:2; }
+  #setup-next-btn, #setup-finish-btn { background:#0a84ff; color:#fff; border:none;
+    border-radius:12px; padding:14px 0; font-size:16px; font-weight:700; width:100%;
+    font-family:inherit; margin-top:4px; }
+  #setup-drive-connect-btn { background:#1c1c1e; color:#fff; border:1px solid #333;
+    border-radius:12px; padding:13px 0; font-size:15px; font-weight:600; width:100%;
+    font-family:inherit; }
+  #setup-drive-status-row { display:flex; align-items:center; justify-content:space-between;
+    background:#1c1c1e; border:1px solid #333; border-radius:10px; padding:12px 14px; }
+  #setup-drive-status-text { font-size:13px; color:#ccc; }
+  #setup-drive-disconnect-btn { background:#2c2c2e; color:#ccc; border:none; border-radius:8px;
+    padding:6px 10px; font-size:12px; font-weight:600; }
+  #setup-drive-disconnect-btn.hidden { display:none; }
+  #setup-skip-drive { background:none; border:none; color:#555; font-size:13px;
+    padding:6px 0; text-align:center; width:100%; font-family:inherit; }
+
+  /* ---------- Settings Modal ---------- */
+  #settings-modal { position:fixed; inset:0; z-index:560; background:#000;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:20px 20px 40px; overflow-y:auto; }
+  #settings-modal.hidden { display:none; }
+  #settings-card { width:100%; max-width:380px; display:flex; flex-direction:column; gap:10px;
+    padding-top:10px; }
+  #settings-title { margin:0 0 4px; font-size:22px; font-weight:800; text-align:center; }
+  .stg-section-title { font-size:11px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:#0a84ff; margin:10px 0 2px; }
+  .stg-divider { border-top:1px solid #2c2c2e; margin:8px 0; }
+  .stg-label { font-size:12px; color:#777; text-transform:uppercase; letter-spacing:.04em; margin-top:6px; }
+  .stg-row { display:flex; gap:6px; align-items:center; }
+  .stg-input { flex:1; background:#1c1c1e; border:1px solid #333; border-radius:10px;
+    color:#fff; padding:11px 13px; font-size:15px; font-family:inherit; width:100%; }
+  .stg-input::placeholder { color:#555; }
+  .stg-csz { display:flex; gap:6px; }
+  .stg-csz .stg-input.city { flex:3; }
+  .stg-csz .stg-input.state { flex:1; text-transform:uppercase; }
+  .stg-csz .stg-input.zip { flex:2; }
+  #stg-logo-row { display:flex; gap:8px; }
+  #stg-logo-pick, #stg-logo-clear { background:#2c2c2e; color:#fff; border:1px solid #3a3a3c;
+    border-radius:8px; padding:9px 12px; font-size:13px; font-weight:600; }
+  #stg-logo-clear { color:#ff453a; }
+  #stg-logo-preview { margin-top:6px; }
+  #stg-logo-preview.hidden { display:none; }
+  #stg-logo-preview img { max-height:60px; max-width:180px; object-fit:contain; border-radius:4px; }
+  #stg-save-profile-btn { background:#0a84ff; color:#fff; border:none; border-radius:10px;
+    padding:13px 0; font-size:15px; font-weight:700; width:100%; font-family:inherit; }
+  #stg-drive-status-row { display:flex; align-items:center; justify-content:space-between;
+    gap:8px; background:#1c1c1e; border:1px solid #333; border-radius:10px; padding:10px 14px; }
+  #stg-drive-status-text { font-size:13px; color:#ccc; }
+  #stg-drive-connect-btn, #stg-drive-disconnect-btn { background:#0a84ff; color:#fff; border:none;
+    border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:600; flex:0 0 auto; }
+  #stg-drive-disconnect-btn { background:#333; }
+  #stg-drive-disconnect-btn.hidden, #stg-drive-connect-btn.hidden { display:none; }
+  #settings-close { background:#1c1c1e; border:1px solid #333; color:#fff; border-radius:10px;
+    padding:12px 0; font-size:15px; font-weight:600; width:100%; margin-top:6px; font-family:inherit; }
+
   /* ---------- Admin (hidden beta-access toggle, task #65) ---------- */
   /* Not in the normal app flow — reached only via ?admin=1 in the URL, and even then only
      rendered if the signed-in email matches CLIENT_ADMIN_EMAILS in app.js. That client-side
@@ -990,6 +1064,7 @@
           </div>
           <button id="gallery-building-btn">🏢 Add Building</button>
           <button id="desktop-import-menu-btn">🖼️ Choose Photos or<br>PDFs from Desktop</button>
+          <button id="settings-btn">⚙️ Settings</button>
           <button id="account-btn">👤 Account</button>
         </div>
       </div>
@@ -1239,6 +1314,117 @@
     </div>
     <button id="account-signout-btn">Sign out</button>
     <button id="account-close">Close</button>
+  </div>
+</div>
+
+<!-- ===== First-run Setup Wizard ===== -->
+<div id="setup-wizard" class="hidden">
+  <div id="setup-card">
+    <div id="setup-progress">Step <span id="setup-step-num">1</span> of 2</div>
+
+    <!-- Step 1: Company & Inspector -->
+    <div id="setup-step-1" class="setup-step">
+      <div class="setup-step-icon">🏢</div>
+      <h2 class="setup-h2">Set Up Your Profile</h2>
+      <p class="setup-sub">This information appears on every PDF report you generate. You can edit it anytime in Settings.</p>
+
+      <div class="setup-field-label">Company name</div>
+      <input id="setup-company-input" class="setup-input" type="text" placeholder="Optional" autocapitalize="words">
+
+      <div class="setup-field-label">Company address</div>
+      <input id="setup-company-address-input" class="setup-input" type="text" placeholder="Street address" autocapitalize="words">
+      <div class="setup-csz">
+        <input id="setup-company-city-input" class="setup-input city" type="text" placeholder="City" autocapitalize="words">
+        <input id="setup-company-state-input" class="setup-input state" type="text" placeholder="ST" autocapitalize="characters" maxlength="2">
+        <input id="setup-company-zip-input" class="setup-input zip" type="text" placeholder="ZIP" inputmode="numeric" maxlength="10">
+      </div>
+
+      <div class="setup-field-label">Company contact (phone / email)</div>
+      <input id="setup-contact-input" class="setup-input" type="text" placeholder="Optional">
+
+      <div class="setup-field-label">Inspector name</div>
+      <input id="setup-inspector-input" class="setup-input" type="text" placeholder="Optional" autocapitalize="words">
+
+      <div class="setup-field-label">License #</div>
+      <input id="setup-license-input" class="setup-input" type="text" placeholder="Optional" autocapitalize="characters">
+
+      <div class="setup-field-label">Inspector phone</div>
+      <input id="setup-inspector-phone-input" class="setup-input" type="tel" placeholder="Optional" autocomplete="tel">
+
+      <div class="setup-field-label">Inspector email</div>
+      <input id="setup-inspector-email-input" class="setup-input" type="email" placeholder="Optional" autocomplete="email" autocapitalize="none">
+
+      <button id="setup-next-btn">Next →</button>
+    </div>
+
+    <!-- Step 2: Google Drive -->
+    <div id="setup-step-2" class="setup-step hidden">
+      <div class="setup-step-icon">☁️</div>
+      <h2 class="setup-h2">Connect Google Drive</h2>
+      <p class="setup-sub">Auto-sync photos to Drive during inspections. Your photos are saved in a "Name That Photo" folder only you can see.</p>
+      <div id="setup-drive-status-row">
+        <span id="setup-drive-status-text">Google Drive: Not connected</span>
+        <button id="setup-drive-disconnect-btn" class="hidden">Disconnect</button>
+      </div>
+      <button id="setup-drive-connect-btn">🔗 Connect Google Drive</button>
+      <button id="setup-finish-btn">Finish Setup ✓</button>
+      <button id="setup-skip-drive" type="button">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Settings Modal ===== -->
+<div id="settings-modal" class="hidden">
+  <div id="settings-card">
+    <h1 id="settings-title">⚙️ Settings</h1>
+
+    <div class="stg-section-title">🏢 Company Profile</div>
+
+    <div class="stg-label">Company name</div>
+    <input id="stg-company-input" class="stg-input" type="text" placeholder="Optional" autocapitalize="words">
+
+    <div class="stg-label">Company address</div>
+    <input id="stg-company-address-input" class="stg-input" type="text" placeholder="Street address" autocapitalize="words">
+    <div class="stg-csz">
+      <input id="stg-company-city-input" class="stg-input city" type="text" placeholder="City" autocapitalize="words">
+      <input id="stg-company-state-input" class="stg-input state" type="text" placeholder="ST" autocapitalize="characters" maxlength="2">
+      <input id="stg-company-zip-input" class="stg-input zip" type="text" placeholder="ZIP" inputmode="numeric" maxlength="10">
+    </div>
+
+    <div class="stg-label">Company contact (phone / email)</div>
+    <input id="stg-contact-input" class="stg-input" type="text" placeholder="Optional">
+
+    <div class="stg-label">Company logo</div>
+    <div id="stg-logo-row">
+      <button id="stg-logo-pick" type="button">Choose image</button>
+      <button id="stg-logo-clear" type="button">Remove</button>
+    </div>
+    <input id="stg-logo-file" type="file" accept="image/*" class="hidden">
+    <div id="stg-logo-preview" class="hidden"><img id="stg-logo-preview-img" alt="logo"></div>
+
+    <div class="stg-label">Inspector name</div>
+    <input id="stg-inspector-input" class="stg-input" type="text" placeholder="Optional" autocapitalize="words">
+
+    <div class="stg-label">License #</div>
+    <input id="stg-license-input" class="stg-input" type="text" placeholder="Optional" autocapitalize="characters">
+
+    <div class="stg-label">Inspector phone</div>
+    <input id="stg-inspector-phone-input" class="stg-input" type="tel" placeholder="Optional" autocomplete="tel">
+
+    <div class="stg-label">Inspector email</div>
+    <input id="stg-inspector-email-input" class="stg-input" type="email" placeholder="Optional" autocomplete="email" autocapitalize="none">
+
+    <button id="stg-save-profile-btn">💾 Save Profile</button>
+
+    <div class="stg-divider"></div>
+    <div class="stg-section-title">☁️ Google Drive</div>
+    <div id="stg-drive-status-row">
+      <span id="stg-drive-status-text">Google Drive: Not connected</span>
+      <button id="stg-drive-connect-btn">Connect</button>
+      <button id="stg-drive-disconnect-btn" class="hidden">Disconnect</button>
+    </div>
+
+    <button id="settings-close">Close</button>
   </div>
 </div>
 
@@ -1801,6 +1987,10 @@
       callback(snap.exists() ? snap.data() : null);
     });
   };
+
+  // General-purpose merge-write on the top-level user doc (used to store setupComplete flag).
+  window.fbUpdateUserDoc = (uid, data) =>
+    setDoc(doc(db, 'users', uid), data, { merge: true });
 
   // Company / inspector profile — stored in a sub-document so it survives cache clears
   // and is available on any device the user signs into.
