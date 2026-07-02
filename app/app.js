@@ -5658,6 +5658,7 @@
     previewFrame: document.getElementById('pdf-preview-frame'),
     previewBack: document.getElementById('pdf-preview-back'),
     previewSend: document.getElementById('pdf-preview-send'),
+    saveProfileBtn: document.getElementById('pdf-save-profile-btn'),
   };
   let pdfPendingRecords = null;
   let pdfPendingAttachments = null;
@@ -6252,6 +6253,13 @@
     }));
   }
 
+  async function saveCompanyProfileToFirestore(prefs) {
+    if (!currentFirebaseUser || typeof window.fbSetCompanyProfile !== 'function') return;
+    try {
+      await window.fbSetCompanyProfile(currentFirebaseUser.uid, prefs);
+    } catch (e) { /* Firestore write failed — localStorage copy already saved */ }
+  }
+
   function openPdfModalCore(photoRecords, attachmentRecords) {
     pdfPendingRecords = photoRecords;
     pdfPendingAttachments = attachmentRecords;
@@ -6344,6 +6352,32 @@
   }
 
   pdfEls.cancel.addEventListener('click', closePdfOptions);
+
+  if (pdfEls.saveProfileBtn) {
+    pdfEls.saveProfileBtn.addEventListener('click', async () => {
+      const prefs = {
+        companyName: pdfEls.companyInput.value.trim(),
+        companyAddress: pdfEls.companyAddressInput.value.trim(),
+        companyCity: pdfEls.companyCityInput.value.trim(),
+        companyState: pdfEls.companyStateInput.value.trim(),
+        companyZip: pdfEls.companyZipInput.value.trim(),
+        companyContact: pdfEls.contactInput.value.trim(),
+        inspectorName: pdfEls.inspectorInput.value.trim(),
+        licenseNumber: pdfEls.licenseInput.value.trim(),
+        inspectorPhone: pdfEls.inspectorPhoneInput.value.trim(),
+        inspectorEmail: pdfEls.inspectorEmailInput.value.trim(),
+        logoDataUrl: pdfLogoDataUrl || null,
+      };
+      savePdfPrefs(Object.assign(loadPdfPrefs(), prefs));
+      await saveCompanyProfileToFirestore(prefs);
+      // Brief visual confirmation on the button
+      const btn = pdfEls.saveProfileBtn;
+      const orig = btn.textContent;
+      btn.textContent = '✅ Saved';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+    });
+  }
 
   // Saves whatever's been entered (same persistence as Cancel — closePdfOptions
   // already calls savePdfProjectInfo) and heads straight to the camera, since at
@@ -7045,6 +7079,14 @@
         currentUserDoc = await window.fbGetUserDoc(user.uid);
       } catch (err) {
         currentUserDoc = null; // Firestore read failed (e.g. rules not yet published) — don't block sign-in on it
+      }
+      // Load cloud-saved company/inspector profile and merge into localStorage so PDF
+      // fields populate correctly even after the browser cache has been cleared.
+      if (typeof window.fbGetCompanyProfile === 'function') {
+        try {
+          const cloudProfile = await window.fbGetCompanyProfile(user.uid);
+          if (cloudProfile) savePdfPrefs(Object.assign(loadPdfPrefs(), cloudProfile));
+        } catch (e) { /* ignore — localStorage values serve as fallback */ }
       }
       els.authEmail.value = '';
       els.authPassword.value = '';
