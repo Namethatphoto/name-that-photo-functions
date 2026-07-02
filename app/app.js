@@ -5060,49 +5060,8 @@
       } catch (err) { console.error(err); }
     }
 
-    // Company name/address and the title/report-generated block on the right ALWAYS
-    // start at the same fixed Y, regardless of logo size or position.
-    // For a left-positioned logo, company text indents to sit beside the logo
-    // (letterhead style) rather than overlapping or being pushed below it.
+    // Title and Report Generated sit at the top-right, starting just below the accent bar.
     const headerContentY = margin + 16;
-    const companyX = (logoPos === 'left' && logoRenderedW > 0)
-      ? margin + logoRenderedW + 10
-      : margin;
-
-    y = headerContentY;
-
-    if (companyName) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(30, 30, 30);
-      doc.text(companyName, companyX, y);
-      y += 16;
-    }
-    if (companyAddress) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(110, 110, 110);
-      doc.text(companyAddress, companyX, y);
-      y += 14;
-    }
-    if (companyCSZ) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(110, 110, 110);
-      doc.text(companyCSZ, companyX, y);
-      y += 14;
-    }
-    if (companyContact) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(110, 110, 110);
-      doc.text(companyContact, companyX, y);
-      y += 14;
-    }
-    const leftBottom = y;
-
-    // Title and Report Generated always start at the same headerContentY as company name
-    // so both columns are horizontally level regardless of logo.
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(...PDF_ACCENT);
@@ -5120,17 +5079,52 @@
     const reportGenY = titleY + 6;
     doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageW - margin, reportGenY, { align: 'right' });
 
-    let rightY = Math.max(leftBottom, reportGenY + 14);
+    // Company info (left) and customer info (right) both start at the same Y:
+    // below the logo AND below "Report Generated", whichever is lower.
+    const logoBottom = (logoRenderedH > 0) ? logoTopY + logoRenderedH + 10 : margin;
+    const companyStartY = Math.max(logoBottom, reportGenY + 14);
+
+    y = companyStartY;
+
+    if (companyName) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(30, 30, 30);
+      doc.text(companyName, margin, y);
+      y += 16;
+    }
+    if (companyAddress) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(110, 110, 110);
+      doc.text(companyAddress, margin, y);
+      y += 14;
+    }
+    if (companyCSZ) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(110, 110, 110);
+      doc.text(companyCSZ, margin, y);
+      y += 14;
+    }
+    if (companyContact) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(110, 110, 110);
+      doc.text(companyContact, margin, y);
+      y += 14;
+    }
+    const leftBottom = y;
+
+    // Customer info starts at the same Y as company info so both columns are level.
+    let rightY = companyStartY;
     if (policyHolder) { doc.text(`Prepared For: ${policyHolder}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (propertyStreet) { doc.text(propertyStreet, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (propertyCSZ) { doc.text(propertyCSZ, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     const rightBottom = rightY;
 
-    // Panel must clear all header content AND the logo bottom edge (logo can extend
-    // below the header text for large sizes or center/right positions).
-    const logoBottom = (logoRenderedH > 0) ? logoTopY + logoRenderedH + 8 : 0;
-    y = Math.max(leftBottom, titleY, rightBottom, logoBottom) + 14;
+    y = Math.max(leftBottom, titleY, rightBottom) + 14;
 
     doc.setDrawColor(...PDF_ACCENT);
     doc.setLineWidth(1.5);
