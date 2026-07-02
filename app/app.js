@@ -7426,16 +7426,22 @@
       if (hasAccess(currentUserDoc)) {
         showAppScreen();
         // Show setup wizard on first sign-in only.
-        // Check all three locations: root user doc (old path), company profile (new path),
-        // and local storage (fast-path, lost on cache clear).
+        // Check all four locations: root user doc, company profile flag, existing company
+        // data (covers users who set up before the flag existed), and localStorage fast-path.
         const localDone  = localStorage.getItem('pn_setupDone_' + user.uid) === '1';
+        const hasData    = !!(cloudProfile?.companyName || cloudProfile?.inspectorName);
         const cloudDone  = currentUserDoc?.setupComplete === true   // root doc (old write path)
-                        || cloudProfile?.setupComplete  === true;   // profile subcollection (new write path)
+                        || cloudProfile?.setupComplete  === true    // profile subcollection (new write path)
+                        || hasData;                                 // has existing profile data → already set up
         if (!cloudDone && !localDone) {
           showSetupWizard();
-        } else if (!localDone) {
-          // Repair local flag so future loads are instant without a Firestore round-trip.
-          localStorage.setItem('pn_setupDone_' + user.uid, '1');
+        } else {
+          // Repair localStorage for fast-path on next load.
+          if (!localDone) localStorage.setItem('pn_setupDone_' + user.uid, '1');
+          // Backfill the explicit flag so future cache-clears don't re-trigger the wizard.
+          if (!cloudProfile?.setupComplete && typeof window.fbSetCompanyProfile === 'function') {
+            window.fbSetCompanyProfile(user.uid, { setupComplete: true }).catch(() => {});
+          }
         }
       } else {
         showPaywallScreen();
