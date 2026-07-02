@@ -59,14 +59,19 @@ async function getFirestoreAccessToken() {
 }
 
 // Convert a plain JS object to Firestore REST field format.
-// logoDataUrl is excluded — it can be large and is kept in local storage only.
+// logoDataUrl is included if it fits within Firestore's 1MB document limit;
+// large logos (>800KB as a base64 string) are skipped to avoid exceeding the limit.
 function toFirestoreFields(obj) {
-  const SKIP = new Set(['logoDataUrl']);
   const fields = {};
   for (const [k, v] of Object.entries(obj)) {
-    if (SKIP.has(k)) continue;
     if (v === null || v === undefined) {
       fields[k] = { nullValue: null };
+    } else if (k === 'logoDataUrl') {
+      // Store the logo only if it fits comfortably under the 1MB document limit.
+      if (typeof v === 'string' && v.length > 0 && v.length <= 800000) {
+        fields[k] = { stringValue: v };
+      }
+      // Oversized logos are silently omitted; text profile data is still saved.
     } else if (typeof v === 'boolean') {
       fields[k] = { booleanValue: v };
     } else if (typeof v === 'number') {
