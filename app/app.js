@@ -5033,7 +5033,15 @@
     drawAccentBar(doc, pageW);
     let y = margin;
 
-    let logoRenderH = 0; // tracks logo height when placed right (to push title down)
+    // Logo is rendered at the very top (just below the accent bar), independently of
+    // all header text. We capture its rendered width and height so we can:
+    //  - indent company text beside a left-positioned logo (letterhead style)
+    //  - ensure the claim panel below clears the logo bottom edge
+    const logoTopY = 10;
+    let logoRenderedH = 0;
+    let logoRenderedW = 0;
+    const logoPos = logoPosition || 'left';
+
     if (logoDataUrl) {
       try {
         const { img, width, height } = await loadImageFromDataUrl(logoDataUrl);
@@ -5042,91 +5050,87 @@
         const maxH = Math.round(88  * sizeFactor);
         const scale = Math.min(maxW / width, maxH / height, 1);
         const w = width * scale, h = height * scale;
+        logoRenderedH = h;
+        logoRenderedW = w;
         const pngDataUrl = toPngDataUrl(img, width, height);
-        const pos = logoPosition || 'left';
-        const logoX = pos === 'center' ? (pageW - w) / 2
-                    : pos === 'right'  ? pageW - margin - w
+        const logoX = logoPos === 'center' ? (pageW - w) / 2
+                    : logoPos === 'right'  ? pageW - margin - w
                     : margin;
-        const logoTopY = 10; // sit just below the 5pt accent bar, near the top of the page
         doc.addImage(pngDataUrl, 'PNG', logoX, logoTopY, w, h);
-        if (pos === 'right') {
-          logoRenderH = h; // title will start below the right-placed logo
-        } else {
-          y = logoTopY + h + 16; // left/center: advance both columns below the logo
-        }
       } catch (err) { console.error(err); }
     }
 
-    // Captured so the "Prepared For" block on the right can start at the same height
-    // as the company name on the left, instead of crowding directly under the title.
-    const companyStartY = y;
+    // Company name/address and the title/report-generated block on the right ALWAYS
+    // start at the same fixed Y, regardless of logo size or position.
+    // For a left-positioned logo, company text indents to sit beside the logo
+    // (letterhead style) rather than overlapping or being pushed below it.
+    const headerContentY = margin + 16;
+    const companyX = (logoPos === 'left' && logoRenderedW > 0)
+      ? margin + logoRenderedW + 10
+      : margin;
+
+    y = headerContentY;
 
     if (companyName) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.setTextColor(30, 30, 30);
-      doc.text(companyName, margin, y);
+      doc.text(companyName, companyX, y);
       y += 16;
     }
     if (companyAddress) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(110, 110, 110);
-      doc.text(companyAddress, margin, y);
+      doc.text(companyAddress, companyX, y);
       y += 14;
     }
     if (companyCSZ) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(110, 110, 110);
-      doc.text(companyCSZ, margin, y);
+      doc.text(companyCSZ, companyX, y);
       y += 14;
     }
     if (companyContact) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(110, 110, 110);
-      doc.text(companyContact, margin, y);
+      doc.text(companyContact, companyX, y);
       y += 14;
     }
     const leftBottom = y;
 
-    // Title sits top-right, alongside the logo/company column rather than centered
-    // below it — wraps to multiple lines if it's too wide for the space available
-    // next to the logo.
+    // Title and Report Generated always start at the same headerContentY as company name
+    // so both columns are horizontally level regardless of logo.
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(...PDF_ACCENT);
     const titleMaxW = Math.max(pageW - margin * 2 - 220, 140);
     const titleLines = doc.splitTextToSize(title || 'Photo Report', titleMaxW);
-    // If logo is right-positioned, push title below the logo (logo starts at logoTopY=10)
-    let titleY = (logoRenderH > 0) ? 10 + logoRenderH + 8 : margin + 16;
+    let titleY = headerContentY;
     titleLines.forEach((line) => {
       doc.text(line, pageW - margin, titleY, { align: 'right' });
       titleY += 24;
     });
 
-    // "Report Generated" sits immediately below the title — the rest of the header
-    // (Prepared For / address / phone) is positioned lower, aligned to the company
-    // info column on the left, so this line doesn't get pushed down with it.
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(110, 110, 110);
     const reportGenY = titleY + 6;
     doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageW - margin, reportGenY, { align: 'right' });
 
-    // "Prepared For" block, right-aligned — vertically aligned to start at the same
-    // height as the company name on the left (companyStartY) rather than directly
-    // under the title, so the two columns read as a matched pair lower on the page.
-    // Falls back to just under the Report Generated line if that would overlap.
-    let rightY = Math.max(companyStartY, reportGenY + 14);
+    let rightY = Math.max(leftBottom, reportGenY + 14);
     if (policyHolder) { doc.text(`Prepared For: ${policyHolder}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (propertyStreet) { doc.text(propertyStreet, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (propertyCSZ) { doc.text(propertyCSZ, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, pageW - margin, rightY, { align: 'right' }); rightY += 14; }
     const rightBottom = rightY;
 
-    y = Math.max(leftBottom, titleY, rightBottom) + 14;
+    // Panel must clear all header content AND the logo bottom edge (logo can extend
+    // below the header text for large sizes or center/right positions).
+    const logoBottom = (logoRenderedH > 0) ? logoTopY + logoRenderedH + 8 : 0;
+    y = Math.max(leftBottom, titleY, rightBottom, logoBottom) + 14;
 
     doc.setDrawColor(...PDF_ACCENT);
     doc.setLineWidth(1.5);
@@ -5143,7 +5147,8 @@
     if (policyNumber) leftRows.push(['Policy Number:', policyNumber]);
 
     const rightRows = [];
-    if (inspectorName) rightRows.push(['Inspector:', licenseNumber ? `${inspectorName} (Lic. #${licenseNumber})` : inspectorName]);
+    if (inspectorName) rightRows.push(['Inspector:', inspectorName]);
+    if (licenseNumber) rightRows.push(['License #:', licenseNumber]);
     const inspectorContact = [inspectorPhone, inspectorEmail].filter(Boolean).join('   |   ');
     if (inspectorContact) rightRows.push(['Inspector Contact:', inspectorContact]);
 
