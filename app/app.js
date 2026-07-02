@@ -2861,19 +2861,18 @@
   function showCameraStartPrompt() {
     els.cameraStartName.textContent = currentFolderName || 'Project';
     hideProjectGate();
-    // Reflect current auto-sync state on the Enable Auto-Save button
-    const asBtn = document.getElementById('camera-start-autosave');
-    if (asBtn) {
-      if (autoSyncEnabled) {
-        asBtn.textContent = '☁️ Auto-Save: ON';
-        asBtn.classList.add('autosave-on');
-        asBtn.disabled = true;
-      } else {
-        asBtn.textContent = '☁️ Enable Auto-Save';
-        asBtn.classList.remove('autosave-on');
-        asBtn.disabled = false;
-      }
+    // Reflect current auto-sync state on the interval buttons
+    const asLabel = document.getElementById('camera-start-autosave-label');
+    if (asLabel) {
+      asLabel.textContent = autoSyncEnabled
+        ? `☁️ Auto-Save: ON (${autoSyncIntervalMin} min)`
+        : '☁️ Auto-Save every:';
     }
+    document.querySelectorAll('.camera-autosave-interval').forEach((btn) => {
+      const min = parseInt(btn.dataset.min, 10);
+      btn.classList.toggle('selected', autoSyncEnabled && min === autoSyncIntervalMin);
+      btn.disabled = autoSyncEnabled;
+    });
     els.cameraStartPrompt.classList.remove('hidden');
   }
   function hideCameraStartPrompt() {
@@ -2925,26 +2924,31 @@
     hideCameraStartPrompt();
     openPdfOptionsForProject();
   });
-  const cameraStartAutosave = document.getElementById('camera-start-autosave');
-  if (cameraStartAutosave) {
-    cameraStartAutosave.addEventListener('click', async () => {
+  document.querySelectorAll('.camera-autosave-interval').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const min = parseInt(btn.dataset.min, 10);
       // Get an interactive Drive token using this tap gesture (required on iOS)
       const token = await getDriveAccessToken({ interactive: true });
       if (!token) {
         toast('Auto-Save requires Google Drive sign-in');
         return;
       }
+      autoSyncIntervalMin = min;
+      localStorage.setItem(AUTO_SYNC_INTERVAL_KEY, String(min));
       autoSyncEnabled = true;
       localStorage.setItem(AUTO_SYNC_KEY, '1');
       applyAutoSyncToggle();
       startAutoSync(); // token is cached — will succeed immediately
-      // Update button in place so user sees confirmation without closing the prompt
-      cameraStartAutosave.textContent = '☁️ Auto-Save: ON';
-      cameraStartAutosave.classList.add('autosave-on');
-      cameraStartAutosave.disabled = true;
-      toast(`☁️ Auto-Save ON — photos upload every ${autoSyncIntervalMin} min while you work`);
+      // Update the group in place — no need to close the prompt
+      const asLabel = document.getElementById('camera-start-autosave-label');
+      if (asLabel) asLabel.textContent = `☁️ Auto-Save: ON (${min} min)`;
+      document.querySelectorAll('.camera-autosave-interval').forEach((b) => {
+        b.classList.toggle('selected', parseInt(b.dataset.min, 10) === min);
+        b.disabled = true;
+      });
+      toast(`☁️ Auto-Save ON — photos upload every ${min} min while you work`);
     });
-  }
+  });
   els.dskPromptSkip.addEventListener('click', () => {
     els.dskPromptModal.classList.remove('active');
   });
