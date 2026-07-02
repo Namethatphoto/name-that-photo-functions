@@ -5103,19 +5103,21 @@
     doc.setFontSize(10);
     const reportGenY = titleY + 6;
     const reportGenDate = new Date().toLocaleString();
-    // colonX: shared alignment point used by both "Report Generated:" and "Prepared For:".
-    // Labels are right-aligned here; values left-align from colonX + colonGap.
-    // Anchored so the date value (the widest expected value) ends exactly at the right margin.
-    const colonGap = 4;
+    // rightEdge: the right end of the blue accent bar — no text may exceed this.
+    const rightEdge = pageW - margin;
+    // "Report Generated:" — measure each part with its own font, place so the
+    // value's last character lands exactly at rightEdge.
+    doc.setFont('helvetica', 'bold');
+    const genLabel = 'Report Generated:  ';
+    const genLabelW = doc.getTextWidth(genLabel);
     doc.setFont('helvetica', 'normal');
-    const reportGenDateW = doc.getTextWidth(reportGenDate);
-    const colonX = pageW - margin - reportGenDateW - colonGap;
+    const genValueW = doc.getTextWidth(reportGenDate);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...PDF_ACCENT);
-    doc.text('Report Generated:', colonX, reportGenY, { align: 'right' });
+    doc.text(genLabel, rightEdge - genValueW - genLabelW, reportGenY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 30, 30);
-    doc.text(reportGenDate, colonX + colonGap, reportGenY);
+    doc.text(reportGenDate, rightEdge - genValueW, reportGenY);
 
     // Company info (left) and customer info (right) both start at the same Y:
     // below the logo AND below "Report Generated", whichever is lower.
@@ -5155,21 +5157,29 @@
     const leftBottom = y;
 
     // Customer info starts at the same Y as company info so both columns are level.
-    // Uses colonX so "Prepared For:" aligns with "Report Generated:" above it.
+    // All items right-align at rightEdge so nothing goes past the blue bar.
     let rightY = companyStartY;
     doc.setFontSize(10);
     if (policyHolder) {
       doc.setFont('helvetica', 'bold');
+      const prepLabel = 'Prepared For:  ';
+      const prepLabelW = doc.getTextWidth(prepLabel);
+      doc.setFont('helvetica', 'normal');
+      // Clamp value width so label + value never exceeds rightEdge.
+      const prepLines = doc.splitTextToSize(policyHolder, titleMaxW - prepLabelW);
+      const prepValueW = doc.getTextWidth(prepLines[0]);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...PDF_ACCENT);
-      doc.text('Prepared For:', colonX, rightY, { align: 'right' });
+      doc.text(prepLabel, rightEdge - prepValueW - prepLabelW, rightY);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 30, 30);
-      doc.text(policyHolder, colonX + colonGap, rightY);
+      doc.text(prepLines[0], rightEdge - prepValueW, rightY);
       rightY += 14;
     }
-    if (propertyStreet) { doc.setFont('helvetica', 'normal'); doc.setTextColor(110, 110, 110); doc.text(propertyStreet, colonX + colonGap, rightY); rightY += 14; }
-    if (propertyCSZ) { doc.text(propertyCSZ, colonX + colonGap, rightY); rightY += 14; }
-    if (ownerPhone) { doc.text(`Phone: ${ownerPhone}`, colonX + colonGap, rightY); rightY += 14; }
+    doc.setTextColor(110, 110, 110);
+    if (propertyStreet) { doc.setFont('helvetica', 'normal'); doc.text(propertyStreet, rightEdge, rightY, { align: 'right' }); rightY += 14; }
+    if (propertyCSZ)    { doc.text(propertyCSZ, rightEdge, rightY, { align: 'right' }); rightY += 14; }
+    if (ownerPhone)     { doc.text(`Phone: ${ownerPhone}`, rightEdge, rightY, { align: 'right' }); rightY += 14; }
     const rightBottom = rightY;
 
     y = Math.max(leftBottom, titleY, rightBottom) + 14;
